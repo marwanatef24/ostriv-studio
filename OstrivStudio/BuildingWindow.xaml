@@ -1,419 +1,132 @@
-<Window x:Class="OstrivStudio.BuildingWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Ostriv Studio · Settlement workspace" Width="1500" Height="930" MinWidth="1120" MinHeight="740" WindowStartupLocation="CenterScreen" Background="#F2F5F9" Foreground="#17253A" FontFamily="Segoe UI">
+<Window x:Class="OstrivStudio.BuildingWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Ostriv Studio" Width="1500" Height="900" MinWidth="1120" MinHeight="740" WindowStartupLocation="CenterScreen" Background="#F3F4F0" Foreground="#20312D" FontFamily="Segoe UI">
   <Window.Resources>
     <Style x:Key="WorkButton" TargetType="Button">
-      <Setter Property="Foreground" Value="#ECF3EF" />
-      <Setter Property="Background" Value="#3A5072" />
-      <Setter Property="BorderBrush" Value="#436169" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="14,10" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
-              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Frame" Property="Opacity" Value="0.82" />
-              </Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="Frame" Property="BorderBrush" Value="#F4C77E" />
-                <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
-              </Trigger>
-              <Trigger Property="IsEnabled" Value="False">
-                <Setter TargetName="Frame" Property="Opacity" Value="0.4" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
+      <Setter Property="Background" Value="#FFFFFF"/><Setter Property="Foreground" Value="#28483F"/><Setter Property="BorderBrush" Value="#CCD9D1"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="11,7"/><Setter Property="Margin" Value="0"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Opacity" Value="0.82"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#166C53"/><Setter TargetName="Frame" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Frame" Property="Opacity" Value="0.42"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="ActionChoice" TargetType="RadioButton">
-      <Setter Property="Background" Value="#F5F7FA" />
-      <Setter Property="BorderBrush" Value="#D6E0E7" />
-      <Setter Property="Foreground" Value="#233D37" />
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="AutomationProperties.HelpText" Value="{Binding Tag, RelativeSource={RelativeSource Self}}" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Card" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,11">
-              <StackPanel>
-                <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontSize="15" FontWeight="SemiBold" />
-                <TextBlock Text="{TemplateBinding Tag}" Foreground="#52665B" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#659A85" /></Trigger>
-              <Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="Background" Value="#E5F2E9" /><Setter TargetName="Card" Property="BorderBrush" Value="#267358" /><Setter TargetName="Card" Property="BorderThickness" Value="2" /></Trigger>
-              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#246BFD" /><Setter TargetName="Card" Property="BorderThickness" Value="2" /></Trigger>
-              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Card" Property="Opacity" Value="0.5" /></Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-    <Style x:Key="PanelGrid" TargetType="DataGrid">
-      <Setter Property="Background" Value="#1D2F4D" />
-      <Setter Property="Foreground" Value="#EDF3EF" />
-      <Setter Property="RowBackground" Value="#1D2F4D" />
-      <Setter Property="AlternatingRowBackground" Value="#263A59" />
-      <Setter Property="GridLinesVisibility" Value="None" />
-      <Setter Property="HeadersVisibility" Value="Column" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="RowHeight" Value="47" />
-      <Setter Property="ColumnHeaderHeight" Value="38" />
-      <Setter Property="CanUserAddRows" Value="False" />
-      <Setter Property="CanUserDeleteRows" Value="False" />
-      <Setter Property="IsReadOnly" Value="True" />
-    </Style>
-    <Style x:Key="PanelHeader" TargetType="DataGridColumnHeader">
-      <Setter Property="Background" Value="#30496A" />
-      <Setter Property="Foreground" Value="#BED0CB" />
-      <Setter Property="Padding" Value="12,0" />
-      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Background" Value="#F7F9F7"/><Setter Property="Foreground" Value="#29463D"/><Setter Property="Cursor" Value="Hand"/><Setter Property="AutomationProperties.HelpText" Value="{Binding Tag, RelativeSource={RelativeSource Self}}"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+        <Border x:Name="Choice" Background="{TemplateBinding Background}" BorderBrush="#D2DED6" BorderThickness="1" CornerRadius="6" Padding="10,8">
+          <StackPanel><TextBlock Text="{TemplateBinding Content}" FontWeight="SemiBold" Foreground="{TemplateBinding Foreground}"/><TextBlock Text="{TemplateBinding Tag}" Foreground="#64786E" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsChecked" Value="True"><Setter TargetName="Choice" Property="Background" Value="#E5F3EA"/><Setter TargetName="Choice" Property="BorderBrush" Value="#26765B"/><Setter TargetName="Choice" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Choice" Property="BorderBrush" Value="#246BFD"/><Setter TargetName="Choice" Property="BorderThickness" Value="2"/></Trigger>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Choice" Property="Opacity" Value="0.83"/></Trigger>
+          <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Choice" Property="Opacity" Value="0.45"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
     </Style>
     <Style x:Key="PanelCell" TargetType="DataGridCell">
-      <Setter Property="Padding" Value="12,5" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Style.Triggers>
-        <Trigger Property="IsSelected" Value="True">
-          <Setter Property="Background" Value="#5A6281" />
-          <Setter Property="Foreground" Value="#FFFFFF" />
-        </Trigger>
-      </Style.Triggers>
+      <Setter Property="Padding" Value="10,3"/><Setter Property="BorderThickness" Value="0"/>
+      <Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#DCEDE3"/><Setter Property="Foreground" Value="#173D30"/></Trigger></Style.Triggers>
     </Style>
   </Window.Resources>
   <Grid>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="76" />
-      <RowDefinition Height="*" />
-    </Grid.RowDefinitions>
-    <Border Background="White" BorderBrush="#D8E0EB" BorderThickness="0,0,0,1">
-      <Grid Margin="24,0">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="*" />
-          <ColumnDefinition Width="Auto" />
-        </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions><RowDefinition Height="66"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <!-- A single command bar keeps profiles, automation and scanning close at hand. -->
+    <Border Background="#173D33">
+      <Grid Margin="20,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <Border Background="#246BFD" CornerRadius="10" Width="38" Height="38">
-            <TextBlock Text="O" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
-          </Border>
-          <StackPanel Margin="12,0,26,0">
-            <TextBlock Text="Ostriv Studio" FontWeight="Bold" FontSize="20" />
-              <TextBlock x:Name="ReleaseLabel" Text="Settlement workspace" Foreground="#6A7890" FontSize="11" />
-          </StackPanel>
+          <Border Background="#D9E8DB" CornerRadius="7" Width="34" Height="34"><TextBlock Text="O" FontSize="20" FontWeight="Bold" Foreground="#285847" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+          <StackPanel Margin="11,0,0,0"><TextBlock Text="Ostriv Studio" FontSize="18" FontWeight="SemiBold" Foreground="White"/><TextBlock x:Name="ReleaseLabel" Text="Resource editor" Foreground="#B5CFC0" FontSize="10"/></StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button Content="Home" Click="Home_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
-          <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
-          <Button Content="Start saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
-        </StackPanel>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button x:Name="ChooseButton" Content="Choose game" Click="ChooseGame_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" />
-          <Menu VerticalAlignment="Center" Background="White" Margin="8,0,0,0">
-            <MenuItem Header="More">
-              <MenuItem Header="Resource ledger" Click="ResourceLedger_Click" />
-              <MenuItem Header="Check for updates" Click="CheckUpdates_Click" />
-            </MenuItem>
-          </Menu>
+          <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Margin="0,0,8,0"/>
+          <Button Content="Start saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#A8D8B7" Foreground="#143C2F" BorderThickness="0" Margin="0,0,8,0"/>
+          <Button Content="Resource overview" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Margin="0,0,8,0"/>
+          <Button x:Name="ChooseButton" Content="Choose game" Click="ChooseGame_Click" Style="{StaticResource WorkButton}"/>
+          <Menu Background="Transparent" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"><MenuItem Header="More" Foreground="White"><MenuItem Header="Review saved rules" Click="PreviewRules_Click"/><MenuItem Header="Supported features" Click="Capabilities_Click"/><Separator/><MenuItem Header="Check for updates" Click="CheckUpdates_Click"/></MenuItem></Menu>
         </StackPanel>
       </Grid>
     </Border>
-    <Grid Grid.Row="1" x:Name="WorkspaceHost" Visibility="Collapsed">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="164" />
-        <ColumnDefinition Width="310" />
-        <ColumnDefinition Width="*" />
-      </Grid.ColumnDefinitions>
-      <Border Background="#102032">
-        <DockPanel Margin="12,24,12,18">
-          <TextBlock DockPanel.Dock="Top" Text="WHAT TO MANAGE" Foreground="#9FB7D0" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,16" />
-          <TextBlock DockPanel.Dock="Bottom" Text="Your profiles stay on this PC" Foreground="#9FB7D0" FontSize="11" Margin="10,0" TextWrapping="Wrap" />
-          <StackPanel x:Name="WorkspaceNavigation">
-            <Button Content="▦   Resources" Tag="0" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="#28425E" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
-            <Button Content="▤   Capacity" Tag="1" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
-            <Button Content="◒   Farms" Tag="2" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
-            <Button Content="⇄   Trading" Tag="3" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
-            <Button Content="◈   Markets" Tag="4" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
-          </StackPanel>
-        </DockPanel>
-      </Border>
-      <Border Grid.Column="1" Background="#1B3048">
-        <Grid Margin="16,24,16,18">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
+    <Border Grid.Row="1" Background="#EAF1E9" BorderBrush="#D2DED3" BorderThickness="0,0,0,1" Padding="20,8">
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <TextBlock x:Name="ConnectionTitle" Text="Start your settlement" FontWeight="SemiBold" Foreground="#255440" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" x:Name="ConnectionDetail" Text="Open Ostriv and load a save, then find buildings." Foreground="#5C7365" Margin="14,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Grid.Column="2" x:Name="ConnectionBadge" Text="Experimental" Foreground="#687C6E" VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="2" Margin="16,14,16,10">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="292"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*" MinWidth="425"/><ColumnDefinition Width="12"/><ColumnDefinition Width="292"/></Grid.ColumnDefinitions>
+      <!-- Building browser -->
+      <Border Background="White" BorderBrush="#D8E1D9" BorderThickness="1" CornerRadius="8">
+        <Grid Margin="14"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
           <StackPanel>
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-              </Grid.ColumnDefinitions>
-              <TextBlock Text="1. Buildings" FontSize="23" FontWeight="SemiBold" Foreground="White" />
-              <Button x:Name="ScanButton" Content="Find" ToolTip="Find buildings in the running game" Click="Scan_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" Margin="8,0,0,0" Grid.Column="1" />
-              <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Style="{StaticResource WorkButton}" Grid.Column="1" Visibility="Collapsed" />
+            <TextBlock Text="Buildings" FontWeight="SemiBold" FontSize="20"/>
+            <TextBlock Text="Find and select buildings to edit" Foreground="#6B7C71" FontSize="11" Margin="0,3,0,12"/>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Grid><TextBox x:Name="BuildingSearch" TextChanged="BuildingSearch_Changed" Padding="9,7"/><TextBlock x:Name="BuildingSearchHint" Text="Search buildings or stock" Foreground="#85968B" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid>
+              <Button x:Name="ScanButton" Grid.Column="1" Content="Find" ToolTip="Find buildings in the running game" Click="Scan_Click" Style="{StaticResource WorkButton}" Background="#226D53" Foreground="White" BorderThickness="0" Margin="7,0,0,0"/>
+              <Button x:Name="CancelButton" Grid.Column="1" Content="Cancel" Click="Cancel_Click" Style="{StaticResource WorkButton}" Margin="7,0,0,0" Visibility="Collapsed"/>
             </Grid>
-            <TextBlock x:Name="BuildingCount" Text="Load a settlement, then select Find" Foreground="#A8BED9" Margin="0,9,0,18" />
-            <Grid>
-              <TextBox x:Name="BuildingSearch" TextChanged="BuildingSearch_Changed" Background="#203650" Foreground="White" BorderBrush="#425D7E" Padding="12,10" />
-              <TextBlock x:Name="BuildingSearchHint" Text="Search buildings or stock" Foreground="#A4B9D3" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+            <Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <ComboBox x:Name="BuildingCategory" SelectedIndex="0" SelectionChanged="BuildingCategory_Changed" Padding="6,4"><ComboBoxItem Content="All buildings"/><ComboBoxItem Content="Storage"/><ComboBoxItem Content="Farm"/><ComboBoxItem Content="Trade"/><ComboBoxItem Content="Water"/><ComboBoxItem Content="Other buildings"/></ComboBox>
+              <CheckBox Grid.Column="1" x:Name="FilterBuildingsByResource" Content="Match item" ToolTip="Only show buildings containing the resource search" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="#566C5D"/>
             </Grid>
-            <Expander Header="More filters" Foreground="#D6E5F6" Margin="0,12,0,10">
-            <StackPanel>
-            <ComboBox x:Name="BuildingCategory" SelectedIndex="0" SelectionChanged="BuildingCategory_Changed" Margin="0,10,0,0">
-              <ComboBoxItem Content="All buildings" />
-              <ComboBoxItem Content="Storage" />
-              <ComboBoxItem Content="Farm" />
-              <ComboBoxItem Content="Trade" />
-              <ComboBoxItem Content="Water" />
-              <ComboBoxItem Content="Other buildings" />
-            </ComboBox>
-            <CheckBox x:Name="FilterBuildingsByResource" Content="Match the resource search" Foreground="#C4D4E8" Margin="0,12,0,12" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed" />
-            </StackPanel>
-            </Expander>
-            <TextBlock x:Name="SelectionSummary" Text="No buildings selected" Foreground="#D6E5F6" FontSize="12" Margin="0,0,0,8" />
-            <WrapPanel Margin="0,0,0,14">
-              <Button Content="All shown" ToolTip="Select all buildings currently shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,6,6" />
-              <Button x:Name="SelectSameTypeButton" Content="Same type" ToolTip="Select shown buildings of the selected type" Click="SelectSameType_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,6,6" IsEnabled="False" />
-              <Button Content="Clear" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,0,6" />
-            </WrapPanel>
+            <TextBlock x:Name="BuildingCount" Text="Load a settlement, then select Find" Foreground="#6B7C71" FontSize="11" Margin="0,9,0,0"/>
+            <DockPanel Margin="0,10,0,8"><TextBlock x:Name="SelectionSummary" Text="No buildings selected" Foreground="#54695B" FontSize="11" VerticalAlignment="Center"/><WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+              <Button Content="All" ToolTip="Select all shown buildings" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Padding="8,5" Margin="0,0,5,0"/>
+              <Button x:Name="SelectSameTypeButton" Content="Same type" ToolTip="Select shown buildings of the same type" Click="SelectSameType_Click" Style="{StaticResource WorkButton}" Padding="8,5" Margin="0,0,5,0" IsEnabled="False"/>
+              <Button Content="Clear" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Padding="8,5"/>
+            </WrapPanel></DockPanel>
           </StackPanel>
-        <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#1B3048" RowBackground="#1B3048" AlternatingRowBackground="#243C57" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
-            <DataGrid.Columns>
-              <DataGridTemplateColumn Width="*">
-                <DataGridTemplateColumn.CellTemplate>
-                  <DataTemplate>
-                    <StackPanel VerticalAlignment="Center">
-                      <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#9FC3F1" />
-                      <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Text="{Binding Summary}" Foreground="#BAD0EA" FontSize="11" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                  </DataTemplate>
-                </DataGridTemplateColumn.CellTemplate>
-              </DataGridTemplateColumn>
-            </DataGrid.Columns>
+          <DataGrid Grid.Row="1" x:Name="BuildingGrid" CellStyle="{StaticResource PanelCell}" Background="#FFFFFF" RowBackground="#FFFFFF" AlternatingRowBackground="#F7F9F6" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="64" BorderThickness="0" GridLinesVisibility="None" IsReadOnly="True" CanUserAddRows="False">
+            <DataGrid.Columns><DataGridTemplateColumn Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Summary}" Foreground="#718276" FontSize="11" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn></DataGrid.Columns>
           </DataGrid>
-          <TextBlock Grid.Row="2" x:Name="ScanFooter" Text="Ctrl or Shift selects several buildings." Foreground="#A8BED9" FontSize="11" Margin="0,14,0,0" TextWrapping="Wrap" />
+          <TextBlock Grid.Row="2" x:Name="ScanFooter" Text="Ctrl or Shift selects several buildings." Foreground="#718276" FontSize="11" Margin="0,9,0,0" TextWrapping="Wrap"/>
         </Grid>
       </Border>
-      <Grid Grid.Column="2" Margin="26,24,26,18">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <Border Background="#E5EDF7" CornerRadius="6" Padding="13,11">
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-              <TextBlock x:Name="ConnectionTitle" Text="Start your settlement" Foreground="#213D65" FontWeight="SemiBold" />
-              <TextBlock x:Name="ConnectionDetail" Text="Open Ostriv and load a save, then scan." Foreground="#56667D" FontSize="11" TextWrapping="Wrap" />
+      <!-- Resource table and editing controls stay visible together. -->
+      <Border Grid.Column="2" Background="White" BorderBrush="#D8E1D9" BorderThickness="1" CornerRadius="8">
+        <Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <StackPanel><TextBlock x:Name="SelectedTitle" Text="Choose a building" FontSize="22" FontWeight="SemiBold"/><TextBlock x:Name="SelectedSubtitle" Text="Its stock and available controls will appear here." Foreground="#6B7C71" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
+          <Grid Grid.Row="1" Margin="0,17,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center"><TextBlock Text="Resources" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Select a resource to edit" FontSize="11" Foreground="#718276" Margin="0,3,0,0"/></StackPanel>
+            <Grid Grid.Column="1"><TextBox x:Name="ResourceSearch" TextChanged="ResourceSearch_Changed" Padding="9,7"/><TextBlock x:Name="ResourceSearchHint" Text="Search resources" Foreground="#85968B" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid>
+          </Grid>
+          <Border Grid.Row="2" x:Name="StockMixPanel" Visibility="Collapsed" Background="#F3F7F3" CornerRadius="6" Padding="10" Margin="0,0,0,9">
+            <StackPanel><TextBlock x:Name="StockMixTitle" Text="Stock mix · selected building" FontWeight="SemiBold" FontSize="11" Foreground="#54695B"/>
+              <ItemsControl x:Name="StockMixItems" Margin="0,6,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,0,10,0"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="#40584A"/><ProgressBar Value="{Binding Percent}" Maximum="100" Height="5" Margin="0,4,0,0" Foreground="#3B8061" Background="#DDE8DE" ToolTip="Share of observed stored stock"/></StackPanel></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
-            <TextBlock Grid.Column="1" x:Name="ConnectionBadge" Text="Experimental" Foreground="#5C6D84" VerticalAlignment="Center" Margin="12,0,0,0" />
-          </Grid>
-        </Border>
-        <StackPanel Grid.Row="1" Margin="0,23,0,22">
-          <TextBlock x:Name="SelectedTitle" Text="Choose a building" FontSize="31" FontWeight="SemiBold" />
-          <TextBlock x:Name="SelectedSubtitle" Text="Its stock and available controls will appear here." Foreground="#56667D" Margin="0,6,0,0" TextWrapping="Wrap" />
-        </StackPanel>
-        <Border Grid.Row="2" Background="White" BorderBrush="#D5DFEB" BorderThickness="1" CornerRadius="12">
-        <Grid x:Name="WorkspacePanels">
-          <Grid>
-            <Grid Margin="20">
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-                <RowDefinition Height="Auto" />
-              </Grid.RowDefinitions>
-              <StackPanel Margin="0,0,0,16">
-              <TextBlock Text="2. Choose a resource" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
-              <Grid>
-                <TextBox x:Name="ResourceSearch" TextChanged="ResourceSearch_Changed" Background="White" Foreground="#17253A" BorderBrush="#CAD5E4" CaretBrush="#246BFD" Padding="12,10" />
-                <TextBlock x:Name="ResourceSearchHint" Text="Search this building's resources" Foreground="#75859A" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
-              </Grid>
-              </StackPanel>
-              <DataGrid Grid.Row="1" x:Name="LiveResourceGrid" Background="White" Foreground="#17253A" RowBackground="White" AlternatingRowBackground="#F4F7FB" BorderThickness="0" GridLinesVisibility="None" RowHeight="50" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed">
-                <DataGrid.ColumnHeaderStyle>
-                  <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="#EAF0F7" />
-                    <Setter Property="Foreground" Value="#536580" />
-                    <Setter Property="Padding" Value="14,12" />
-                    <Setter Property="BorderThickness" Value="0" />
-                  </Style>
-                </DataGrid.ColumnHeaderStyle>
-                <DataGrid.CellStyle>
-                  <Style TargetType="DataGridCell">
-                    <Setter Property="Padding" Value="14,10" />
-                    <Setter Property="BorderThickness" Value="0" />
-                    <Style.Triggers>
-                      <Trigger Property="IsSelected" Value="True">
-                        <Setter Property="Background" Value="#DAE7FF" />
-                        <Setter Property="Foreground" Value="#123A80" />
-                      </Trigger>
-                    </Style.Triggers>
-                  </Style>
-                </DataGrid.CellStyle>
-                <DataGrid.Columns>
-                  <DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="2*" />
-                  <DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="*" />
-                  <DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="*" />
-                  <DataGridTextColumn Header="Incoming" Binding="{Binding Awaited}" Width="*" />
-                </DataGrid.Columns>
-              </DataGrid>
-              <Border Grid.Row="2" BorderBrush="#D8E1EE" BorderThickness="0,1,0,0" Padding="0,18,0,0" Margin="0,14,0,0">
-                <StackPanel>
-                  <TextBlock Text="3. Choose what happens" FontSize="18" FontWeight="SemiBold" />
-                  <TextBlock x:Name="ActionResource" Text="Select a resource above" Foreground="#56667D" Margin="0,5,0,13" />
-                  <Grid>
-                    <Grid.ColumnDefinitions>
-                      <ColumnDefinition Width="*" />
-                      <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" Tag="Make one change to the selected buildings." Style="{StaticResource ActionChoice}" IsChecked="True" Checked="ActionIntent_Changed" Margin="0,0,8,0" />
-                    <RadioButton Grid.Column="1" x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Tag="Save a minimum for every building of this type." Style="{StaticResource ActionChoice}" Checked="ActionIntent_Changed" Margin="8,0,0,0" />
-                  </Grid>
-                  <TextBlock x:Name="ActionHint" Text="Choose stock above, then review a one-time addition or a saved minimum." Foreground="#56667D" TextWrapping="Wrap" Margin="0,10,0,15" />
-                  <Button x:Name="ReviewActionButton" Content="Review addition…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" IsEnabled="False" />
-                </StackPanel>
-              </Border>
-            </Grid>
-          </Grid>
-          <Grid Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
-              <TextBlock Text="CAPACITY CONTROL" Foreground="#557AAB" FontSize="11" FontWeight="Bold" />
-              <TextBlock Text="More room for your settlement" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
-              <TextBlock Text="Review storage limits across selected buildings and choose a one-time increase or a saved minimum." TextWrapping="Wrap" Foreground="#56667D" Margin="0,8,0,24" />
-              <Border Background="#EDF4FE" CornerRadius="12" Padding="20"><StackPanel>
-                <TextBlock Text="YOUR SELECTION" Foreground="#426D9E" FontSize="11" FontWeight="Bold" />
-                <TextBlock x:Name="BuildingToolsSummary" Text="Select buildings to see their available controls." TextWrapping="Wrap" FontSize="15" Margin="0,10,0,16" />
-                <Button x:Name="CapacityTool" Content="Review capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" Background="#246BFD" BorderThickness="0" HorizontalAlignment="Left" />
-              </StackPanel></Border>
-              <TextBlock Text="Keep capacity topped up" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,0" />
-              <TextBlock Text="Saved capacity minimums reapply while the rule monitor runs. Granaries, warehouses and big hay barracks are supported." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
-              <WrapPanel><Button Content="Review saved rules" Click="PreviewRules_Click" Style="{StaticResource WorkButton}" /><Button Content="Supported features" Click="Capabilities_Click" Style="{StaticResource WorkButton}" Margin="10,0,0,0" /></WrapPanel>
-            </StackPanel></ScrollViewer>
-          </Grid>
-          <Grid Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
-              <TextBlock Text="FARM PLANNER" Foreground="#46836D" FontSize="11" FontWeight="Bold" />
-              <TextBlock Text="Plan the seasons ahead" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
-              <TextBlock x:Name="FarmSelectionSummary" Text="Select one grain farm to get started." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,24" />
-              <Border Background="#E8F3EC" CornerRadius="12" Padding="22"><StackPanel>
-                <TextBlock Text="Crop rotations" FontSize="20" FontWeight="SemiBold" Foreground="#174F47" />
-                <TextBlock Text="Plan future crops, restore field fertility and manage ploughing for selected fields." TextWrapping="Wrap" Foreground="#3E675B" Margin="0,10,0,18" />
-                <Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Background="#174F47" Foreground="White" BorderThickness="0" />
-              </StackPanel></Border>
-              <TextBlock Text="How to begin" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,8" />
-              <TextBlock Text="1   Scan a loaded settlement&#x0a;2   Choose a grain farm from your buildings&#x0a;3   Review fields and future crops before applying" Foreground="#56667D" LineHeight="29" TextWrapping="Wrap" />
-            </StackPanel></ScrollViewer>
-          </Grid>
-          <Grid Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
-              <TextBlock Text="TRADE DESK" Foreground="#A46731" FontSize="11" FontWeight="Bold" />
-              <TextBlock Text="Move trade forward" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
-              <TextBlock Text="Choose where to start. Deals come from the city currently open on Ostriv's world map." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,24" />
-              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                <Border Background="#FFF3E2" CornerRadius="12" Padding="20"><StackPanel>
-                  <TextBlock Text="01 / CITY DEALS" Foreground="#95612F" FontSize="11" FontWeight="Bold" />
-                  <TextBlock Text="Allocate exports" FontSize="19" FontWeight="SemiBold" Margin="0,10,0,0" />
-                  <TextBlock Text="Select deals and split their remaining quantities across compatible buildings." TextWrapping="Wrap" Foreground="#755E4C" Margin="0,10,0,18" />
-                  <Button Content="View deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" Background="#8B531D" BorderThickness="0" HorizontalAlignment="Left" />
-                </StackPanel></Border>
-                <Border Grid.Column="2" Background="#EEF3F9" CornerRadius="12" Padding="20"><StackPanel>
-                  <TextBlock Text="02 / BUILDINGS" Foreground="#536D8D" FontSize="11" FontWeight="Bold" />
-                  <TextBlock Text="Export targets" FontSize="19" FontWeight="SemiBold" Margin="0,10,0,0" />
-                  <TextBlock Text="Review existing targets for selected trading posts and docks." TextWrapping="Wrap" Foreground="#56667D" Margin="0,10,0,18" />
-                  <Button x:Name="ExportTool" Content="Manage targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-                </StackPanel></Border>
-              </Grid>
-              <TextBlock x:Name="TradeSelectionSummary" Text="Select trading buildings to manage their targets." Foreground="#56667D" TextWrapping="Wrap" Margin="0,20,0,0" />
-            </StackPanel></ScrollViewer>
-          </Grid>
-          <Grid Visibility="Collapsed">
-            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
-              <TextBlock Text="MARKET SHELVES" Foreground="#8665A6" FontSize="11" FontWeight="Bold" />
-              <TextBlock Text="Keep shops supplied" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
-              <TextBlock x:Name="MarketSelectionSummary" Text="Select a rowhouse shop, then choose an existing item below." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,22" />
-              <Border Background="#F4F0F8" CornerRadius="12" Padding="18" Margin="0,0,0,20"><StackPanel>
-                <TextBlock Text="See what your shops sell" FontWeight="SemiBold" FontSize="16" />
-                <TextBlock Text="Select one or more rowhouse shops to see their assigned goods and empty slots." Foreground="#665771" TextWrapping="Wrap" Margin="0,8,0,14" />
-                <Button Content="View assigned goods…" Click="RetailAssignments_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-              </StackPanel></Border>
-              <TextBlock Text="CHOOSE AN ITEM" FontSize="11" FontWeight="Bold" Foreground="#6B5A7C" />
-              <WrapPanel Margin="0,12,0,20">
-                <Button Content="Buckwheat  →" Tag="Buckwheat" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
-                <Button Content="Clothes  →" Tag="Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
-                <Button Content="Shoes  →" Tag="Shoes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
-                <Button Content="Warm clothes  →" Tag="Warm Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
-              </WrapPanel>
-              <Border Background="#EEF5EF" CornerRadius="12" Padding="18" Margin="0,0,0,20"><StackPanel>
-                <TextBlock Text="Keep supported shop goods stocked" FontWeight="SemiBold" FontSize="16" />
-                <TextBlock Text="Create missing saved rules for clothes, shoes and warm clothes in all rowhouse shops. Existing rules stay unchanged; only existing stock records can be maintained." Foreground="#52665B" TextWrapping="Wrap" Margin="0,8,0,14" />
-                <Button Content="Set up shop rules…" Click="SetupMarketRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" />
-              </StackPanel></Border>
-              <Border BorderBrush="#DED5E9" BorderThickness="1" CornerRadius="10" Padding="18"><StackPanel>
-                <TextBlock Text="What can be edited?" FontWeight="SemiBold" FontSize="16" />
-                <TextBlock Text="Existing buckwheat, clothes, shoes and warm clothes in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
-                <Button Content="Find rowhouse shops" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-              </StackPanel></Border>
-            </StackPanel></ScrollViewer>
-          </Grid>
-        </Grid></Border>
-        <TextBlock Grid.Row="3" x:Name="BottomStatus" Text="Your saved rules stay on this PC." Foreground="#56667D" FontSize="11" Margin="0,13,0,0" TextWrapping="Wrap" />
-      </Grid>
-    </Grid>
-    <Grid Grid.Row="1" x:Name="HomePanel" Background="#F5F3EC">
-      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel MaxWidth="1190" Margin="36,30,36,42">
-          <Border CornerRadius="18" Background="#173E35" Padding="32,28" Margin="0,0,0,24">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <StackPanel>
-                <TextBlock Text="YOUR SETTLEMENT, AT A GLANCE" Foreground="#B8D8BE" FontSize="11" FontWeight="Bold" />
-                <TextBlock Text="What would you like to manage?" Foreground="White" FontSize="32" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
-                <TextBlock Text="Choose a task below. Open Ostriv and load your settlement when you're ready." Foreground="#D5E7D8" FontSize="15" Margin="0,10,0,0" TextWrapping="Wrap" />
-              </StackPanel>
-              <Border Grid.Column="1" Background="#28594B" CornerRadius="12" Padding="16,12" Margin="20,0,0,0" VerticalAlignment="Center">
-                <StackPanel><TextBlock Text="GAME STATUS" Foreground="#B8D8BE" FontSize="10" FontWeight="Bold" />
-                  <TextBlock Text="{Binding Text, ElementName=ConnectionTitle}" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,5,0,0" />
-                </StackPanel>
-              </Border>
-            </Grid>
           </Border>
-          <DockPanel Margin="0,0,0,14"><TextBlock Text="Choose a task" FontSize="21" FontWeight="SemiBold" DockPanel.Dock="Left" />
-            <TextBlock Text="Your saved rules stay on this PC" Foreground="#63746A" HorizontalAlignment="Right" VerticalAlignment="Center" /></DockPanel>
-          <UniformGrid Columns="3" Rows="2">
-            <Button Tag="0" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="0,0,12,12" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="▦" FontSize="26" Foreground="#31755D"/><TextBlock Text="Resources" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Add stock once or keep it stocked with a saved rule." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage resources  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-            <Button Tag="2" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="6,0,6,12" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="◒" FontSize="26" Foreground="#638044"/><TextBlock Text="Farms" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Plan crops, manage ploughing and restore field nutrients." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage farms  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-            <Button Tag="3" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="12,0,0,12" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="⇄" FontSize="26" Foreground="#A36938"/><TextBlock Text="Trading" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="See city deals and prepare existing export targets." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage trading  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-            <Button Tag="4" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="0,6,12,0" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="◈" FontSize="26" Foreground="#8A658C"/><TextBlock Text="Markets" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Find supported shop items and manage their stock." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage markets  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-            <Button Tag="1" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="6,6,6,0" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="▤" FontSize="26" Foreground="#58838B"/><TextBlock Text="Storage capacity" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Increase supported storage limits for your buildings." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage capacity  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-            <Button Tag="5" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="#E6EEE3" Foreground="#203B32" BorderBrush="#D0DDCE" Padding="22" Margin="12,6,0,0" HorizontalContentAlignment="Stretch">
-              <StackPanel><TextBlock Text="↻" FontSize="26" Foreground="#31755D"/><TextBlock Text="Saved rules" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Review your profiles and automatic stock settings." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Open saved rules  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
-            </Button>
-          </UniformGrid>
-          <TextBlock Text="Changes are reviewed before they are applied. Some game features are still being verified." Foreground="#63746A" Margin="0,24,0,0" TextWrapping="Wrap" />
-        </StackPanel>
-      </ScrollViewer>
+          <DataGrid Grid.Row="3" x:Name="LiveResourceGrid" CellStyle="{StaticResource PanelCell}" Background="White" Foreground="#20312D" RowBackground="White" AlternatingRowBackground="#F7F9F6" BorderThickness="0" GridLinesVisibility="None" RowHeight="42" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed">
+            <DataGrid.ColumnHeaderStyle><Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#EFF4EF"/><Setter Property="Foreground" Value="#607769"/><Setter Property="Padding" Value="10,8"/><Setter Property="BorderThickness" Value="0"/></Style></DataGrid.ColumnHeaderStyle>
+            <DataGrid.Columns><DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="2*"/><DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="*"/><DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="*"/><DataGridTextColumn Header="Awaited" Binding="{Binding Awaited}" Width="*"/></DataGrid.Columns>
+          </DataGrid>
+          <Border Grid.Row="4" Background="#F3F7F3" BorderBrush="#DDE8DE" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,12,0,0"><StackPanel>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Edit selected resource" FontSize="15" FontWeight="SemiBold"/><TextBlock Grid.Column="1" x:Name="ActionResource" Text="Select a resource above" Foreground="#688071" FontSize="11" VerticalAlignment="Center"/></Grid>
+            <Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" Tag="One change to the selected buildings" Style="{StaticResource ActionChoice}" IsChecked="True" Checked="ActionIntent_Changed" Margin="0,0,5,0"/>
+              <RadioButton Grid.Column="1" x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Tag="Save a minimum for this building type" Style="{StaticResource ActionChoice}" Checked="ActionIntent_Changed" Margin="5,0,0,0"/>
+            </Grid>
+            <Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ActionHint" Text="Choose a building and resource." Foreground="#607669" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0"/><Button Grid.Column="1" x:Name="ReviewActionButton" Content="Choose amount to add…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#226D53" Foreground="White" BorderThickness="0" IsEnabled="False"/></Grid>
+          </StackPanel></Border>
+        </Grid>
+      </Border>
+      <!-- Related building tools are one click away without leaving the workspace. -->
+      <Border Grid.Column="4" Background="White" BorderBrush="#D8E1D9" BorderThickness="1" CornerRadius="8">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="14">
+          <TextBlock Text="Building tools" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="Available actions for your selection" Foreground="#718276" FontSize="11" Margin="0,3,0,12"/>
+          <Border Background="#F4F7F3" CornerRadius="6" Padding="10" Margin="0,0,0,9"><StackPanel><TextBlock Text="Storage capacity" FontWeight="SemiBold"/><TextBlock x:Name="BuildingToolsSummary" Text="Select supported storage buildings." Foreground="#718276" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/><Button x:Name="CapacityTool" Content="Review capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left"/></StackPanel></Border>
+          <Border Background="#F4F7F3" CornerRadius="6" Padding="10" Margin="0,0,0,9"><StackPanel><TextBlock Text="Farms" FontWeight="SemiBold"/><TextBlock x:Name="FarmSelectionSummary" Text="Select one grain farm." Foreground="#718276" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/><Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left"/></StackPanel></Border>
+          <Border Background="#F4F7F3" CornerRadius="6" Padding="10" Margin="0,0,0,9"><StackPanel><TextBlock Text="Trading" FontWeight="SemiBold"/><TextBlock x:Name="TradeSelectionSummary" Text="Select trading buildings to manage targets." Foreground="#718276" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/><WrapPanel><Button Content="City deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" Padding="9,6" Margin="0,0,6,5"/><Button x:Name="ExportTool" Content="Export targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" Padding="9,6" Margin="0,0,0,5"/></WrapPanel></StackPanel></Border>
+          <Border Background="#F4F7F3" CornerRadius="6" Padding="10"><StackPanel><TextBlock Text="Markets" FontWeight="SemiBold"/><TextBlock x:Name="MarketSelectionSummary" Text="Select rowhouse shops to see available goods." Foreground="#718276" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,7"/><WrapPanel><Button Content="Assigned goods…" Click="RetailAssignments_Click" Style="{StaticResource WorkButton}" Padding="9,6" Margin="0,0,6,5"/><Button Content="Find shops" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" Padding="9,6" Margin="0,0,0,5"/></WrapPanel><Button Content="Set up shop rules…" Click="SetupMarketRules_Click" Style="{StaticResource WorkButton}" Padding="9,6" HorizontalAlignment="Left" Margin="0,3,0,0"/><TextBlock Text="Quick select" Foreground="#718276" FontSize="11" Margin="0,10,0,5"/><WrapPanel><Button Content="Buckwheat" Tag="Buckwheat" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,5,5"/><Button Content="Clothes" Tag="Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,5,5"/><Button Content="Shoes" Tag="Shoes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,5,5"/><Button Content="Warm clothes" Tag="Warm Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,5,5"/></WrapPanel></StackPanel></Border>
+        </StackPanel></ScrollViewer>
+      </Border>
     </Grid>
+    <Border Grid.Row="3" Background="#E8EEE8" Padding="20,7"><TextBlock x:Name="BottomStatus" Text="Your saved rules stay on this PC." Foreground="#607568" FontSize="11" TextWrapping="Wrap"/></Border>
   </Grid>
 </Window>

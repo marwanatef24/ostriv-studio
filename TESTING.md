@@ -1,5 +1,7 @@
 # Testing and evidence
 
+For 0.2.6, the redesigned workspace was exercised with a separate copy of the existing profile and a read-only scan of the supported game build. Building search and same-type selection found five rowhouse shops, and their stock and available actions were displayed. No editor write was performed in this test. The automated suite passed 257 checks, including cyclic crop-pattern matching. The original profile was not changed.
+
 The test suite exercises simulated memory, profile persistence, bulk planning, capacity rules, farm settings, trade-list validation, stale snapshots and partial-write failures. It does not prove that arbitrary game objects or a new executable are safe.
 
 On the executable identified in [COMPATIBILITY.md](COMPATIBILITY.md), supervised tests in a disposable settlement observed:
