@@ -45,6 +45,9 @@ public partial class BuildingWindow : Window
     public BuildingWindow()
     {
         InitializeComponent();
+        string version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "preview";
+        ReleaseLabel.Text = $"Version {version} · Settlement workspace";
+        Title = $"Ostriv Studio {version} · Settlement workspace";
         _buildingView = CollectionViewSource.GetDefaultView(_buildings);
         _buildingView.Filter = x => x is BuildingRow row && (BuildingCategory.SelectedIndex <= 0 || (BuildingCategory.SelectedItem as ComboBoxItem)?.Content?.ToString() == row.Category) && (string.IsNullOrWhiteSpace(BuildingSearch.Text) || row.Name.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Summary.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase)) &&
             (FilterBuildingsByResource.IsChecked != true || string.IsNullOrWhiteSpace(ResourceSearch.Text) || row.Candidate.Resources.Any(r =>

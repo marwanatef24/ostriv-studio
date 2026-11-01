@@ -78,7 +78,7 @@
           </Border>
           <StackPanel Margin="12,0,26,0">
             <TextBlock Text="Ostriv Studio" FontWeight="Bold" FontSize="20" />
-            <TextBlock Text="Settlement workspace" Foreground="#6A7890" FontSize="11" />
+              <TextBlock x:Name="ReleaseLabel" Text="Settlement workspace" Foreground="#6A7890" FontSize="11" />
           </StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
