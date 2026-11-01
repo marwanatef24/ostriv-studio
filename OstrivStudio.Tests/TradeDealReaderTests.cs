@@ -7,11 +7,17 @@ internal static class TradeDealReaderTests
     {
         private readonly Dictionary<ulong, byte> _bytes = [];
         public bool ChangeDealOnRead; private int _dealReads;
+        public bool ChangeFirstDealDuringSecondRead;
+        public bool ChangeListDuringFinalDealCheck; public int SecondDealReads;
+        public int ListHeaderReads;
         public void Put(ulong address, byte[] bytes) { for (int i = 0; i < bytes.Length; i++) _bytes[address + (uint)i] = bytes[i]; }
         public byte[] Read(ulong address, int size)
         {
+            if (address == 0x10000) ListHeaderReads++;
             var result = Enumerable.Range(0, size).Select(i => _bytes.GetValueOrDefault(address + (uint)i)).ToArray();
             if (ChangeDealOnRead && address == 0x40000 && ++_dealReads == 1) Put(0x40000 + 52, BitConverter.GetBytes(191));
+            if (ChangeFirstDealDuringSecondRead && address == 0x60000) { ChangeFirstDealDuringSecondRead = false; Put(0x40000 + 52, BitConverter.GetBytes(191)); }
+            if (ChangeListDuringFinalDealCheck && address == 0x60000 && ++SecondDealReads == 3) Put(0x10000 + 0x250, BitConverter.GetBytes(1));
             return result;
         }
         public void Write(ulong address, byte[] data) => throw new Exception("Trade read attempted a write");
@@ -54,5 +60,30 @@ internal static class TradeDealReaderTests
         (scan, memory) = Fixture();
         try { TradeDealReader.Capture(scan with { UiCandidates = [] }, memory); throw new Exception("Missing trade UI accepted"); }
         catch (InvalidOperationException) { Console.WriteLine("PASS trade reader requires one reviewed trade list"); }
+        (scan, memory) = Fixture();
+        memory.Put(0x10000 + 0x250, BitConverter.GetBytes(2));
+        memory.Put(0x20000 + 8, BitConverter.GetBytes(0x50000UL));
+        var secondItem = new byte[0x258]; BinaryPrimitives.WriteUInt64LittleEndian(secondItem, 0x9100);
+        BinaryPrimitives.WriteUInt64LittleEndian(secondItem.AsSpan(0x250), 0x60000); memory.Put(0x50000, secondItem);
+        var secondDeal = new byte[56]; BinaryPrimitives.WriteInt32LittleEndian(secondDeal, 2);
+        BinaryPrimitives.WriteInt32LittleEndian(secondDeal.AsSpan(4), 13); BinaryPrimitives.WriteInt32LittleEndian(secondDeal.AsSpan(12), 43);
+        BinaryPrimitives.WriteInt32LittleEndian(secondDeal.AsSpan(52), 30); memory.Put(0x60000, secondDeal);
+        var both = TradeDealReader.Capture(scan, memory).ToArray();
+        memory.ChangeFirstDealDuringSecondRead = true;
+        try { TradeDealReader.Capture(scan, memory); throw new Exception("Earlier changed deal accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS a deal changing while a later row is read invalidates the capture"); }
+        memory.Put(0x40000 + 52, BitConverter.GetBytes(190));
+        memory.ChangeListDuringFinalDealCheck = true;
+        try { TradeDealReader.Capture(scan, memory); throw new Exception("Late list change accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS a list changing during final row checks invalidates the capture"); }
+        memory.ChangeListDuringFinalDealCheck = false; memory.Put(0x10000 + 0x250, BitConverter.GetBytes(2));
+        memory.ListHeaderReads = 0;
+        TradeDealReader.RequireAllUnchanged(scan, memory, both);
+        Check(memory.ListHeaderReads == 3, "selected deals are checked together in one guarded list capture");
+        memory.Put(0x60000 + 52, BitConverter.GetBytes(31));
+        try { TradeDealReader.RequireAllUnchanged(scan, memory, both); throw new Exception("Changed selected deal accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS a changed deal blocks the selected export batch"); }
+        try { TradeDealReader.RequireAllUnchanged(scan, memory, [both[0], both[0]]); throw new Exception("Duplicate selected deal accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS duplicate selected deals are rejected before review"); }
     }
 }

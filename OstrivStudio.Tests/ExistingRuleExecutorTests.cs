@@ -51,7 +51,7 @@ internal static class ExistingRuleExecutorTests
     public static void Run()
     {
         var catalog = JsonSerializer.Deserialize<List<ResourceDefinition>>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "resources.json")), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        Check(catalog.Single(r => r.Id == 26).Name == "SALT" && catalog.Single(r => r.Id == 46).Name == "CLOTHES" &&
+        Check(catalog.Single(r => r.Id == 7).Name == "BUCKWHEAT" && catalog.Single(r => r.Id == 26).Name == "SALT" && catalog.Single(r => r.Id == 46).Name == "CLOTHES" &&
             catalog.Single(r => r.Id == 47).Name == "SHOES" && catalog.Single(r => r.Id == 93).Name == "WARM_CLOTHES",
             "retail resource IDs match the shipped resource catalog");
         var existingShopRules = new[] { new MaintenanceRule { BuildingType = " BUILDING_ROWHOUSE_SHOP ", ResourceId = 46, Target = 37, Enabled = false },
@@ -59,9 +59,9 @@ internal static class ExistingRuleExecutorTests
         Check(MarketRulePlanner.MissingShopRules(existingShopRules).SequenceEqual([47, 93]) &&
             existingShopRules[0].Target == 37 && !existingShopRules[0].Enabled && existingShopRules[1].Target == 500,
             "shop rule setup leaves existing settings intact and adds only missing shop goods");
-        Check(new[] {46,47,93}.All(id => ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", id)) &&
-            !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 26) && !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 7) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
-            "retail edits allow existing clothes, shoes and warm clothes; salt is blocked");
+        Check(new[] {7,46,47,93}.All(id => ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", id)) &&
+            !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 26) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
+            "retail edits allow existing buckwheat, clothes, shoes and warm clothes; salt is blocked");
         Check(ExistingRuleExecutor.SupportsExisting("building_trading_dock", 92) && ExistingRuleExecutor.SupportsExisting("building_trading_dock", 46) &&
             !ExistingRuleExecutor.SupportsExisting("building_trading_dock", 87) && !ExistingRuleExecutor.SupportsInsertion("building_trading_dock", 92),
             "trading-dock stock support is limited to corroborated existing records");
@@ -76,6 +76,13 @@ internal static class ExistingRuleExecutorTests
         Check(ExistingRuleExecutor.Prepare(retailProfile, retailScan).Entries is [{Target:100,Insert:false}], "existing retail stock can be replenished to 100");
         try { ManualStockEditor.Prepare(retailScan, [retail], 46, 51); throw new Exception("Retail overfill accepted"); }
         catch (InvalidOperationException) { Console.WriteLine("PASS one-time retail additions cannot overfill the shelf target"); }
+        var buckwheatShop = retail with { Resources = [new(0,7,74,0,0xbf800000,0)] };
+        var buckwheatScan = scan with { Buildings = [buckwheatShop] };
+        Check(ManualStockEditor.Prepare(buckwheatScan, [buckwheatShop], 7, 1).Entries is [{ Target: 75, Insert: false }],
+            "existing buckwheat can be added to a rowhouse shelf");
+        retailProfile.AutomationProfiles[retailProfile.SelectedProfile].MaintenanceRules[0].ResourceId = 7;
+        Check(ExistingRuleExecutor.Prepare(retailProfile, retailScan).Entries.Count == 0 && !ExistingRuleExecutor.SupportsInsertion(retail.ClassName, 7),
+            "a missing buckwheat shelf is never inserted by the saved rule");
         var plan = ExistingRuleExecutor.Prepare(profile, scan);
         Check(plan.Entries.Count == 4 && plan.Entries.Single(e => e.Record.Id == 87).Insert, "batch plans missing barley insertion alongside existing resources");
         Check(ExistingRuleExecutor.ApplyChecked(profile, scan, memory) == 4 && memory.Writes == 5 &&

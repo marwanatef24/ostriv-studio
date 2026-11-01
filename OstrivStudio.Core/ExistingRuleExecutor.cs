@@ -25,7 +25,7 @@ public static class ExistingRuleExecutor
         "building_trading_dock" => id is 92 or 46,
         // Standard existing records corroborated in retail shops. No retail
         // insertion and no edits to their separate incoming-demand list.
-        "building_rowhouse_shop" => id is 46 or 47 or 93,
+        "building_rowhouse_shop" => id is 7 or 46 or 47 or 93,
         var name => Classes.Contains(name)
     };
     private static readonly HashSet<int> CampInsertions = [6, 9, 10, 18, 33, 36, 69, 80, 85, 92, 109, 123, 133];

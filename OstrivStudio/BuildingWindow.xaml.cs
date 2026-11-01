@@ -81,22 +81,38 @@ public partial class BuildingWindow : Window
 
     private void SelectShown_Click(object sender, RoutedEventArgs e) => BuildingGrid.SelectAll();
     private void ClearSelection_Click(object sender, RoutedEventArgs e) => BuildingGrid.UnselectAll();
+    private void SelectSameType_Click(object sender, RoutedEventArgs e)
+    {
+        if (BuildingGrid.SelectedItem is not BuildingRow selected) return;
+        int? selectedResource = (LiveResourceGrid.SelectedItem as LiveResourceRow)?.Id;
+        var matches = _buildingView.Cast<BuildingRow>().Where(row => string.Equals(row.Candidate.ClassName, selected.Candidate.ClassName, StringComparison.OrdinalIgnoreCase)).ToArray();
+        BuildingGrid.UnselectAll();
+        foreach (var row in matches) BuildingGrid.SelectedItems.Add(row);
+        if (selectedResource.HasValue) LiveResourceGrid.SelectedItem = _observations.FirstOrDefault(r => r.Id == selectedResource.Value);
+        BottomStatus.Text = $"Selected {matches.Length} shown building(s) of the same type. Check each candidate before editing.";
+    }
     private void Home_Click(object sender, RoutedEventArgs e) { WorkspaceHost.Visibility = Visibility.Collapsed; HomePanel.Visibility = Visibility.Visible; }
     private void HomeTask_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button button || !int.TryParse(button.Tag?.ToString(), out int index)) return;
         if (index == 5) { Profiles_Click(sender, e); return; }
+        WorkspaceHost.Visibility = Visibility.Visible; HomePanel.Visibility = Visibility.Collapsed;
+        OpenWorkspace(index);
+    }
+    private void Workspace_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int index) &&
+            index >= 0 && index < WorkspacePanels.Children.Count && WorkspacePanels.Children[index].Visibility != Visibility.Visible)
+            OpenWorkspace(index);
+    }
+    private void OpenWorkspace(int index)
+    {
         BuildingCategory.SelectedIndex = 0;
         FilterBuildingsByResource.IsChecked = false;
         ResourceSearch.Text = "";
         BuildingSearch.Text = index switch { 2 => "grain farm", 3 => "trading", 4 => "rowhouse shop", _ => "" };
-        WorkspaceHost.Visibility = Visibility.Visible; HomePanel.Visibility = Visibility.Collapsed;
         SelectWorkspace(index);
         if (BuildingGrid.SelectedItems.Count == 0 && BuildingGrid.Items.Count > 0) BuildingGrid.SelectedIndex = 0;
-    }
-    private void Workspace_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int index)) SelectWorkspace(index);
     }
     private void SelectWorkspace(int index)
     {
@@ -133,6 +149,23 @@ public partial class BuildingWindow : Window
         BuildingSearch.Text = "rowhouse shop";
         ResourceSearch.Text = "";
         FilterBuildingsByResource.IsChecked = false;
+    }
+    private async void RetailAssignments_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
+        if (_snapshot is null || selected.Length == 0 || selected.Any(b => !RetailAssignments.SupportsClass(b.Candidate.ClassName)))
+        { MessageBox.Show(this, "Find buildings, then select one or more rowhouse shops.", "Shop assignments", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        var snapshot = _snapshot;
+        try
+        {
+            BottomStatus.Text = "Reading the selected shops' assigned goods…";
+            var assignments = await Task.Run(() => RetailAssignments.CaptureFromGame(snapshot, selected.Select(b => b.Candidate).ToArray()));
+            if (!IsLoaded || !ReferenceEquals(snapshot, _snapshot)) return;
+            BottomStatus.Text = "Shop assignments loaded. No game changes were made.";
+            new RetailAssignmentsWindow(assignments, selected.ToDictionary(b => b.Candidate.Address), _resourceNames) { Owner = this }.ShowDialog();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Win32Exception or OverflowException)
+        { MessageBox.Show(this, ex.Message, "Shop assignments", MessageBoxButton.OK, MessageBoxImage.Information); }
     }
     private void SetupMarketRules_Click(object sender, RoutedEventArgs e)
     {
@@ -249,7 +282,7 @@ public partial class BuildingWindow : Window
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and warm clothes (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop buckwheat, clothes, shoes and warm clothes (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {
@@ -259,6 +292,10 @@ public partial class BuildingWindow : Window
     private void UpdateCount() => BuildingCount.Text = _buildings.Count == 0 ? "No results yet" : $"{_buildingView.Cast<object>().Count()} shown from {_buildings.Count} candidates";
     private void Building_Changed(object sender, SelectionChangedEventArgs e)
     {
+        int? previousResource = (LiveResourceGrid.SelectedItem as LiveResourceRow)?.Id;
+        int selectionCount = BuildingGrid.SelectedItems.Count;
+        if (SelectionSummary is not null) SelectionSummary.Text = selectionCount == 0 ? "No buildings selected" : $"{selectionCount} building{(selectionCount == 1 ? "" : "s")} selected";
+        if (SelectSameTypeButton is not null) SelectSameTypeButton.IsEnabled = selectionCount > 0;
         _observations.Clear();
         if (BuildingGrid.SelectedItem is not BuildingRow row) { SelectedTitle.Text = "Choose a building"; SelectedSubtitle.Text = "Its stock and available controls will appear here."; UpdateActions(); return; }
         int selectedCount = BuildingGrid.SelectedItems.Count;
@@ -270,6 +307,7 @@ public partial class BuildingWindow : Window
         foreach (var total in BuildingDiscovery.Summarize(row.Candidate.Resources).OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
             _observations.Add(new(_resourceNames.GetValueOrDefault(total.Id, $"Unknown resource {total.Id}"), total.Id,
                 FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other)));
+        if (previousResource.HasValue) LiveResourceGrid.SelectedItem = _observations.FirstOrDefault(r => r.Id == previousResource.Value);
         UpdateActions();
     }
     private void AdoptScan(DiscoveryResult result, DateTime observedUtc)

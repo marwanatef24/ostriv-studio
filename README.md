@@ -40,7 +40,7 @@ For deals, open the world map in Ostriv, select a city with an active deal, scan
 
 ## Markets
 
-Choose Markets to find rowhouse shops, then select Clothes, Shoes or Warm Clothes. Add once or save a minimum up to the normal 100-unit retail target. **Set up shop rules…** can create missing rules for all three goods without replacing existing rules; start the saved-rule monitor to apply them. These controls support existing records only. Salt, other retail goods, market stalls and missing retail records are blocked.
+Choose Markets to find rowhouse shops, select one or more, then use **View assigned goods…** to see what they sell and the empty assignment slots. Stock figures are from the last scan and may differ from Ostriv's display. Choose Buckwheat, Clothes, Shoes or Warm Clothes to add once or save a minimum up to the normal 100-unit retail target. **Set up shop rules…** creates missing rules for clothes, shoes and warm clothes without replacing existing rules; add a buckwheat rule separately if wanted, and start the saved-rule monitor to apply rules. These controls support existing records only. Salt, other retail goods, market stalls and missing retail records are blocked.
 
 ## Build and test
 
