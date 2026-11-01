@@ -111,5 +111,30 @@ internal static class FarmCropEditorTests
         plough = FarmPloughEditor.Capture(FarmCropEditor.Capture(scan, farm, memory), memory); memory.FailOnWrite = 2;
         try { FarmPloughEditor.ApplyChecked(plough, [1, 2], false, memory); throw new Exception("Partial plough edit ignored"); }
         catch (PartialGameWriteException) when (memory.Writes == 2) { Console.WriteLine("PASS an uncertain plough batch requires backup recovery"); }
+        (scan, farm, memory) = Fixture();
+        byte[] nutrients = [.. BitConverter.GetBytes(.3f), .. BitConverter.GetBytes(.36f), .. BitConverter.GetBytes(.24f)];
+        memory.Put(0x209E8, nutrients); memory.Put(0x309E8, nutrients);
+        memory.Put(0x209E4, BitConverter.GetBytes(0x12345678u)); memory.Put(0x209F4, BitConverter.GetBytes(0x87654321u));
+        var fertility = FarmPloughEditor.CaptureFertility(FarmCropEditor.Capture(scan, farm, memory), memory);
+        Check(FarmPloughEditor.RestoreFertilityChecked(fertility, [1, 2], memory) == 2 && memory.Writes == 2 &&
+            FarmPloughEditor.CaptureFertility(fertility.Farm, memory).Fields.All(f => f.Red == 1 && f.Green == 1 && f.Blue == 1) &&
+            BitConverter.ToUInt32(memory.Read(0x209E4, 4)) == 0x12345678u && BitConverter.ToUInt32(memory.Read(0x209F4, 4)) == 0x87654321u,
+            "fertility restores all three nutrients on selected fields");
+        (scan, farm, memory) = Fixture(); memory.Put(0x209E8, nutrients); memory.Put(0x309E8, nutrients);
+        fertility = FarmPloughEditor.CaptureFertility(FarmCropEditor.Capture(scan, farm, memory), memory);
+        memory.Put(0x309E8, BitConverter.GetBytes(.5f));
+        try { FarmPloughEditor.RestoreFertilityChecked(fertility, [1, 2], memory); throw new Exception("Stale nutrients accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS changed nutrients block the entire batch before writing"); }
+        (scan, farm, memory) = Fixture(); memory.Put(0x209E8, nutrients); memory.Put(0x309E8, nutrients);
+        fertility = FarmPloughEditor.CaptureFertility(FarmCropEditor.Capture(scan, farm, memory), memory); memory.FailOnWrite = 2;
+        try { FarmPloughEditor.RestoreFertilityChecked(fertility, [1, 2], memory); throw new Exception("Partial fertility edit ignored"); }
+        catch (PartialGameWriteException) when (memory.Writes == 2) { Console.WriteLine("PASS an uncertain fertility batch requires backup recovery"); }
+        (scan, farm, memory) = Fixture(); memory.Put(0x209E8, BitConverter.GetBytes(float.NaN));
+        try { FarmPloughEditor.CaptureFertility(FarmCropEditor.Capture(scan, farm, memory), memory); throw new Exception("Invalid nutrient accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS invalid nutrient values are rejected before writes"); }
+        (scan, farm, memory) = Fixture(); memory.Put(0x209E8, nutrients); memory.Put(0x309E8, nutrients);
+        fertility = FarmPloughEditor.CaptureFertility(FarmCropEditor.Capture(scan, farm, memory), memory);
+        try { FarmPloughEditor.RestoreFertilityChecked(fertility, [1, 1], memory); throw new Exception("Duplicate field accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS duplicate fertility targets are rejected before writes"); }
     }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3 — simpler controls and fertility preview
+
+- Simplified the main building, resource and action flow, hid advanced building filters until needed, and made market shortcuts find rowhouse shops and select the exact existing item.
+- Added a reviewed bulk fertility reset for selected grain-farm fields on the supported game build. REA revealed the original editor's three-nutrient reset; current offsets were independently compared with two in-game field tooltips. A three-field reset passed memory readback and two fields showed 100% for each nutrient in the game. The test was not saved and reopened; the original autosaves were restored.
+- Direct trade-deal changes, missing market records, other building-specific controls and automatic fertility rules remain unsupported. See [feature coverage](FEATURE-COVERAGE.md).
+
 ## 0.2.2 — crop plan generator preview
 
 - Generate a field-length crop rotation from selected crops and an optional ploughing assumption, then review it as a draft and optionally save it as a preset.
