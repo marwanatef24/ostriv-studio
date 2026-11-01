@@ -82,9 +82,8 @@
           </StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button Content="Buildings" Style="{StaticResource WorkButton}" Background="#E8F0FF" Foreground="#1C55B8" BorderThickness="0" />
           <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
-          <Button Content="Resources" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
+          <Button Content="Resource ledger" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
           <Button Content="Run automation" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
@@ -95,11 +94,25 @@
     </Border>
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="350" />
+        <ColumnDefinition Width="164" />
+        <ColumnDefinition Width="310" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
-      <Border Background="#132238">
-        <Grid Margin="20,24,20,18">
+      <Border Background="#102032">
+        <DockPanel Margin="12,24,12,18">
+          <TextBlock DockPanel.Dock="Top" Text="WORKSPACES" Foreground="#9FB7D0" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,16" />
+          <TextBlock DockPanel.Dock="Bottom" Text="Your profiles stay on this PC" Foreground="#9FB7D0" FontSize="11" Margin="10,0" TextWrapping="Wrap" />
+          <StackPanel x:Name="WorkspaceNavigation">
+            <Button Content="▦   Resources" Tag="0" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="#28425E" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
+            <Button Content="▤   Capacity" Tag="1" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
+            <Button Content="◒   Farms" Tag="2" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
+            <Button Content="⇄   Trading" Tag="3" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
+            <Button Content="◈   Markets" Tag="4" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="Transparent" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <Border Grid.Column="1" Background="#1B3048">
+        <Grid Margin="16,24,16,18">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -134,7 +147,7 @@
               <Button Content="Clear selection" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
             </StackPanel>
           </StackPanel>
-          <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#132238" RowBackground="#132238" AlternatingRowBackground="#192C45" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
+        <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#1B3048" RowBackground="#1B3048" AlternatingRowBackground="#243C57" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
             <DataGrid.Columns>
               <DataGridTemplateColumn Width="*">
                 <DataGridTemplateColumn.CellTemplate>
@@ -152,7 +165,7 @@
           <TextBlock Grid.Row="2" x:Name="ScanFooter" Text="Ctrl or Shift selects several buildings." Foreground="#A8BED9" FontSize="11" Margin="0,14,0,0" TextWrapping="Wrap" />
         </Grid>
       </Border>
-      <Grid Grid.Column="1" Margin="26,24,26,18">
+      <Grid Grid.Column="2" Margin="26,24,26,18">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
           <RowDefinition Height="Auto" />
@@ -176,25 +189,9 @@
           <TextBlock x:Name="SelectedTitle" Text="Choose a building" FontSize="31" FontWeight="SemiBold" />
           <TextBlock x:Name="SelectedSubtitle" Text="Its stock and available controls will appear here." Foreground="#56667D" Margin="0,6,0,0" TextWrapping="Wrap" />
         </StackPanel>
-        <TabControl Grid.Row="2" Background="White" BorderBrush="#D5DFEB" Foreground="#17253A" Padding="0">
-          <TabControl.Resources>
-            <Style TargetType="TabItem">
-              <Setter Property="Padding" Value="18,12" />
-              <Setter Property="FontSize" Value="14" />
-              <Setter Property="Background" Value="#E6ECF4" />
-              <Setter Property="Foreground" Value="#17253A" />
-              <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
-                <Border x:Name="TabFrame" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0,0,0,3" Padding="{TemplateBinding Padding}">
-                  <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
-                </Border>
-                <ControlTemplate.Triggers>
-                  <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabFrame" Property="Background" Value="White"/><Setter TargetName="TabFrame" Property="BorderBrush" Value="#246BFD"/><Setter TargetName="TabFrame" Property="TextElement.Foreground" Value="#1C55B8"/><Setter TargetName="TabFrame" Property="TextElement.FontWeight" Value="SemiBold"/></Trigger>
-                  <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabFrame" Property="BorderBrush" Value="#8B4D12"/></Trigger>
-                </ControlTemplate.Triggers>
-              </ControlTemplate></Setter.Value></Setter>
-            </Style>
-          </TabControl.Resources>
-          <TabItem Header="Resources">
+        <Border Grid.Row="2" Background="White" BorderBrush="#D5DFEB" BorderThickness="1" CornerRadius="12">
+        <Grid x:Name="WorkspacePanels">
+          <Grid>
             <Grid Margin="20">
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -249,42 +246,77 @@
                 </StackPanel>
               </Border>
             </Grid>
-          </TabItem>
-          <TabItem Header="Building">
-            <StackPanel Margin="28">
-              <TextBlock Text="Storage &amp; capacity" FontSize="24" FontWeight="SemiBold" />
-              <TextBlock x:Name="BuildingToolsSummary" Text="Select buildings to see their available controls." TextWrapping="Wrap" Foreground="#56667D" Margin="0,12,0,20" />
-              <Button x:Name="CapacityTool" Content="Review capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-              <TextBlock Text="Capacity minimums reapply while the rule monitor runs." Foreground="#56667D" TextWrapping="Wrap" Margin="0,18,0,18" />
-              <Button Content="Review saved rules" Click="PreviewRules_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-              <Button Content="Supported features" Click="Capabilities_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Margin="0,14,0,0" />
-            </StackPanel>
-          </TabItem>
-          <TabItem Header="Farms">
-            <StackPanel Margin="28">
-              <TextBlock Text="Fields &amp; crop plans" FontSize="24" FontWeight="SemiBold" />
-              <TextBlock Text="Select one grain farm. Arrange future crops, choose from 25 rotation suggestions, save your own presets, copy compatible plans or manage ploughing." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
-              <Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Background="#174F47" Foreground="White" BorderThickness="0" />
-            </StackPanel>
-          </TabItem>
-          <TabItem Header="Trading">
-            <StackPanel Margin="28">
-              <TextBlock Text="Deals &amp; export stock" FontSize="24" FontWeight="SemiBold" />
-              <TextBlock Text="Choose a city on Ostriv's world map to inspect active deals. Export targets use existing entries on selected trading posts and docks." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
-              <WrapPanel>
-                <Button Content="View active deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" />
-                <Button x:Name="ExportTool" Content="Manage export targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" />
+          </Grid>
+          <Grid Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
+              <TextBlock Text="CAPACITY CONTROL" Foreground="#557AAB" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="More room for your settlement" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
+              <TextBlock Text="Review storage limits across selected buildings and choose a one-time increase or a saved minimum." TextWrapping="Wrap" Foreground="#56667D" Margin="0,8,0,24" />
+              <Border Background="#EDF4FE" CornerRadius="12" Padding="20"><StackPanel>
+                <TextBlock Text="YOUR SELECTION" Foreground="#426D9E" FontSize="11" FontWeight="Bold" />
+                <TextBlock x:Name="BuildingToolsSummary" Text="Select buildings to see their available controls." TextWrapping="Wrap" FontSize="15" Margin="0,10,0,16" />
+                <Button x:Name="CapacityTool" Content="Review capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" Background="#246BFD" BorderThickness="0" HorizontalAlignment="Left" />
+              </StackPanel></Border>
+              <TextBlock Text="Keep capacity topped up" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,0" />
+              <TextBlock Text="Saved capacity minimums reapply while the rule monitor runs. Granaries, warehouses and big hay barracks are supported." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
+              <WrapPanel><Button Content="Review saved rules" Click="PreviewRules_Click" Style="{StaticResource WorkButton}" /><Button Content="Supported features" Click="Capabilities_Click" Style="{StaticResource WorkButton}" Margin="10,0,0,0" /></WrapPanel>
+            </StackPanel></ScrollViewer>
+          </Grid>
+          <Grid Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
+              <TextBlock Text="FARM PLANNER" Foreground="#46836D" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="Plan the seasons ahead" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
+              <TextBlock x:Name="FarmSelectionSummary" Text="Select one grain farm to get started." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,24" />
+              <Border Background="#E8F3EC" CornerRadius="12" Padding="22"><StackPanel>
+                <TextBlock Text="Crop rotations" FontSize="20" FontWeight="SemiBold" Foreground="#174F47" />
+                <TextBlock Text="Explore 25 suggestions, save your own plans, copy compatible rotations and manage field ploughing in one place." TextWrapping="Wrap" Foreground="#3E675B" Margin="0,10,0,18" />
+                <Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Background="#174F47" Foreground="White" BorderThickness="0" />
+              </StackPanel></Border>
+              <TextBlock Text="How to begin" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,8" />
+              <TextBlock Text="1   Scan a loaded settlement&#x0a;2   Choose a grain farm from your buildings&#x0a;3   Review fields and future crops before applying" Foreground="#56667D" LineHeight="29" TextWrapping="Wrap" />
+            </StackPanel></ScrollViewer>
+          </Grid>
+          <Grid Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
+              <TextBlock Text="TRADE DESK" Foreground="#A46731" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="Move trade forward" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
+              <TextBlock Text="Choose where to start. Deals come from the city currently open on Ostriv's world map." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,24" />
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Background="#FFF3E2" CornerRadius="12" Padding="20"><StackPanel>
+                  <TextBlock Text="01 / CITY DEALS" Foreground="#95612F" FontSize="11" FontWeight="Bold" />
+                  <TextBlock Text="Allocate exports" FontSize="19" FontWeight="SemiBold" Margin="0,10,0,0" />
+                  <TextBlock Text="Select deals and split their remaining quantities across compatible buildings." TextWrapping="Wrap" Foreground="#755E4C" Margin="0,10,0,18" />
+                  <Button Content="View deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" Background="#8B531D" BorderThickness="0" HorizontalAlignment="Left" />
+                </StackPanel></Border>
+                <Border Grid.Column="2" Background="#EEF3F9" CornerRadius="12" Padding="20"><StackPanel>
+                  <TextBlock Text="02 / BUILDINGS" Foreground="#536D8D" FontSize="11" FontWeight="Bold" />
+                  <TextBlock Text="Export targets" FontSize="19" FontWeight="SemiBold" Margin="0,10,0,0" />
+                  <TextBlock Text="Review existing targets for selected trading posts and docks." TextWrapping="Wrap" Foreground="#56667D" Margin="0,10,0,18" />
+                  <Button x:Name="ExportTool" Content="Manage targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+                </StackPanel></Border>
+              </Grid>
+              <TextBlock x:Name="TradeSelectionSummary" Text="Select trading buildings to manage their targets." Foreground="#56667D" TextWrapping="Wrap" Margin="0,20,0,0" />
+            </StackPanel></ScrollViewer>
+          </Grid>
+          <Grid Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28">
+              <TextBlock Text="MARKET SHELVES" Foreground="#8665A6" FontSize="11" FontWeight="Bold" />
+              <TextBlock Text="Keep shops supplied" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
+              <TextBlock x:Name="MarketSelectionSummary" Text="Select a rowhouse shop, then choose an existing item below." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,22" />
+              <TextBlock Text="CHOOSE AN ITEM" FontSize="11" FontWeight="Bold" Foreground="#6B5A7C" />
+              <WrapPanel Margin="0,12,0,20">
+                <Button Content="Clothes  →" Tag="Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
+                <Button Content="Shoes  →" Tag="Shoes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
+                <Button Content="Salt  →" Tag="Salt" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
               </WrapPanel>
-            </StackPanel>
-          </TabItem>
-          <TabItem Header="Markets">
-            <StackPanel Margin="28">
-              <TextBlock Text="Market stock" FontSize="24" FontWeight="SemiBold" />
-              <TextBlock Text="Select a rowhouse shop, open Resources and choose Clothes, Shoes or Salt. Add once or save a minimum up to the normal 100-unit shelf target. Existing stored records only; missing goods and other market types remain inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
-              <Button Content="Find market buildings" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
-            </StackPanel>
-          </TabItem>
-        </TabControl>
+              <Border BorderBrush="#DED5E9" BorderThickness="1" CornerRadius="10" Padding="18"><StackPanel>
+                <TextBlock Text="What can be edited?" FontWeight="SemiBold" FontSize="16" />
+                <TextBlock Text="Existing clothes, shoes and salt in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <Button Content="Find rowhouse shops" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+              </StackPanel></Border>
+            </StackPanel></ScrollViewer>
+          </Grid>
+        </Grid></Border>
         <TextBlock Grid.Row="3" x:Name="BottomStatus" Text="Your saved rules stay on this PC." Foreground="#56667D" FontSize="11" Margin="0,13,0,0" TextWrapping="Wrap" />
       </Grid>
     </Grid>
