@@ -1,0 +1,14 @@
+<Application x:Class="OstrivStudio.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" StartupUri="BuildingWindow.xaml">
+  <Application.Resources>
+    <SolidColorBrush x:Key="Ink" Color="#E8EDE5"/>
+    <SolidColorBrush x:Key="Muted" Color="#91A196"/>
+    <SolidColorBrush x:Key="Accent" Color="#C4E095"/>
+    <Style TargetType="TextBlock"><Setter Property="FontFamily" Value="Segoe UI"/></Style>
+    <Style TargetType="Button"><Setter Property="Foreground" Value="#F1EEE2"/><Setter Property="Background" Value="#31515B"/><Setter Property="BorderBrush" Value="#67847E"/><Setter Property="Padding" Value="15,9"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Margin" Value="0,0,8,0"/></Style>
+    <Style TargetType="TextBox"><Setter Property="Background" Value="#1D3540"/><Setter Property="Foreground" Value="#F1EEE2"/><Setter Property="BorderBrush" Value="#67847E"/><Setter Property="CaretBrush" Value="#E3BD7F"/><Setter Property="Padding" Value="10,8"/></Style>
+    <Style TargetType="ComboBox"><Setter Property="Padding" Value="8,6"/><Setter Property="Foreground" Value="#1A2921"/></Style>
+    <Style TargetType="DataGrid"><Setter Property="Background" Value="#203741"/><Setter Property="Foreground" Value="#F0EEE6"/><Setter Property="RowBackground" Value="#203741"/><Setter Property="AlternatingRowBackground" Value="#29434A"/><Setter Property="BorderThickness" Value="0"/><Setter Property="GridLinesVisibility" Value="None"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="CanUserAddRows" Value="False"/><Setter Property="CanUserDeleteRows" Value="False"/><Setter Property="RowHeight" Value="40"/><Setter Property="ColumnHeaderHeight" Value="38"/></Style>
+    <Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#35555A"/><Setter Property="Foreground" Value="#D0DED6"/><Setter Property="Padding" Value="10,0"/><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style TargetType="DataGridCell"><Setter Property="Padding" Value="10,4"/><Setter Property="BorderThickness" Value="0"/></Style>
+  </Application.Resources>
+</Application>

@@ -1,0 +1,41 @@
+name: Publish preview release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify release target
+        shell: pwsh
+        run: |
+          $version = ([xml](Get-Content .\OstrivStudio\OstrivStudio.csproj -Raw)).Project.PropertyGroup.Version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag does not match the project version.' }
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Release commit is not on main.' }
+      - run: dotnet build .\OstrivStudio\OstrivStudio.csproj -c Release
+      - run: dotnet run --project .\OstrivStudio.Tests -c Release -- "$env:RUNNER_TEMP\ostriv-studio-release-tests"
+      - run: dotnet publish .\OstrivStudio\OstrivStudio.csproj -c Release -r win-x64 --self-contained true -o "$env:RUNNER_TEMP\ostriv-publish"
+      - run: dotnet tool install --tool-path "$env:RUNNER_TEMP\vpk" vpk --version 1.2.0
+      - name: Package
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          & "$env:RUNNER_TEMP\vpk\vpk.exe" pack --packId OstrivStudio.Editor --packVersion $version --packDir "$env:RUNNER_TEMP\ostriv-publish" --mainExe OstrivStudio.exe --packTitle 'Ostriv Studio' --packAuthors 'Ostriv Studio Contributors' --releaseNotes .\CHANGELOG.md --outputDir "$env:RUNNER_TEMP\ostriv-release" --shortcuts StartMenuRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging failed.' }
+      - name: Publish release and update feed
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = Get-ChildItem "$env:RUNNER_TEMP\ostriv-release" -File | ForEach-Object { $_.FullName }
+          gh release create $env:GITHUB_REF_NAME $files --verify-tag --prerelease --title "Ostriv Studio $($env:GITHUB_REF_NAME) preview" --notes-file .\CHANGELOG.md
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed; inspect GitHub before retrying.' }

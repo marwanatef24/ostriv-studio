@@ -1,0 +1,692 @@
+[
+  {
+    "id": 6,
+    "name": "WHEAT",
+    "category": "GRAINS"
+  },
+  {
+    "id": 87,
+    "name": "BARLEY",
+    "category": "GRAINS"
+  },
+  {
+    "id": 10,
+    "name": "SUNFLOWER",
+    "category": "SEEDS"
+  },
+  {
+    "id": 26,
+    "name": "SALT",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 90,
+    "name": "HORLIKA",
+    "category": "ALCOHOL"
+  },
+  {
+    "id": 91,
+    "name": "MEAD",
+    "category": "ALCOHOL"
+  },
+  {
+    "id": 7,
+    "name": "BUCKWHEAT",
+    "category": "GRAINS"
+  },
+  {
+    "id": 8,
+    "name": "POTATO",
+    "category": "EDIBLE_CROPS"
+  },
+  {
+    "id": 11,
+    "name": "FLOUR",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 12,
+    "name": "SUNFLOWER_OIL",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 21,
+    "name": "MILK",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 22,
+    "name": "BEEF",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 27,
+    "name": "FISH",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 28,
+    "name": "DRIED_FISH",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 30,
+    "name": "CHICKEN_EGGS",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 31,
+    "name": "CHICKEN_MEAT",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 59,
+    "name": "PORK",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 60,
+    "name": "SALO",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 61,
+    "name": "HONEY",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 70,
+    "name": "HORSE_MEAT",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 71,
+    "name": "ONIONS",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 72,
+    "name": "COCUMBER",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 73,
+    "name": "BEETROOT",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 74,
+    "name": "CABBAGE",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 75,
+    "name": "CARROT",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 76,
+    "name": "RASPBERRY",
+    "category": "FRUITS"
+  },
+  {
+    "id": 94,
+    "name": "APRICOT",
+    "category": "FRUITS"
+  },
+  {
+    "id": 95,
+    "name": "CHERRY",
+    "category": "FRUITS"
+  },
+  {
+    "id": 96,
+    "name": "APPLE",
+    "category": "FRUITS"
+  },
+  {
+    "id": 97,
+    "name": "GARLIC",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 98,
+    "name": "HORSERADISH",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 99,
+    "name": "MARROW",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 100,
+    "name": "PEAS",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 101,
+    "name": "PUMPKIN",
+    "category": "VEGETABLES"
+  },
+  {
+    "id": 102,
+    "name": "BUTTER",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 103,
+    "name": "CHEESE",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 104,
+    "name": "SMETANA",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 44,
+    "name": "BEER",
+    "category": "ALCOHOL"
+  },
+  {
+    "id": 108,
+    "name": "DRIED_FRUIT",
+    "category": "FRUITS"
+  },
+  {
+    "id": 82,
+    "name": "MUTTON",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 9,
+    "name": "HEMP",
+    "category": "NON_EDIBLE_CROPS"
+  },
+  {
+    "id": 86,
+    "name": "HOPS",
+    "category": "NON_EDIBLE_CROPS"
+  },
+  {
+    "id": 16,
+    "name": "WOOD",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 18,
+    "name": "THATCH",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 34,
+    "name": "IRON ORE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 33,
+    "name": "IRON",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 35,
+    "name": "NAILS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 36,
+    "name": "METAL_PARTS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 38,
+    "name": "HORSE_SHOE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 39,
+    "name": "FIREWOOD",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 40,
+    "name": "CHARCOAL",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 42,
+    "name": "LIME",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 46,
+    "name": "CLOTHES",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 47,
+    "name": "SHOES",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 48,
+    "name": "LEATHER",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 49,
+    "name": "COW_HIDES",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 50,
+    "name": "TEXTILES",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 57,
+    "name": "BARK",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 63,
+    "name": "QUICK LIME",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 69,
+    "name": "HORSE_TACK",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 92,
+    "name": "BROADCLOTH",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 93,
+    "name": "WARM_CLOTHES",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 81,
+    "name": "WOOL",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 79,
+    "name": "SHEEP HIDE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 80,
+    "name": "SHEEP SKIN",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 83,
+    "name": "FLAX",
+    "category": "NON_EDIBLE_CROPS"
+  },
+  {
+    "id": 85,
+    "name": "LINSEED",
+    "category": "SEEDS"
+  },
+  {
+    "id": 32,
+    "name": "BRICK",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 114,
+    "name": "GLASSWARE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 115,
+    "name": "WINDOW GLASS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 111,
+    "name": "ASH",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 112,
+    "name": "LYE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 109,
+    "name": "POTASH",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 110,
+    "name": "SOAP",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 113,
+    "name": "TALLOW",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 116,
+    "name": "EARTHENWARE",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 119,
+    "name": "GLAZE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 123,
+    "name": "THREADS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 124,
+    "name": "FISHING NETS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 58,
+    "name": "WATER",
+    "category": "WATER"
+  },
+  {
+    "id": 14,
+    "name": "DRINKING WATER",
+    "category": "WATER"
+  },
+  {
+    "id": 23,
+    "name": "HAY",
+    "category": "NON_EDIBLE_CROPS"
+  },
+  {
+    "id": 17,
+    "name": "LOGS",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 65,
+    "name": "STONE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 41,
+    "name": "LIMESTONE",
+    "category": "RAW_MATERIALS"
+  },
+  {
+    "id": 1,
+    "name": "WHEAT HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 2,
+    "name": "BUCKWHEAT HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 3,
+    "name": "POTATO HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 4,
+    "name": "HEMP HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 5,
+    "name": "SUNFLOWER HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 84,
+    "name": "FLAX HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 89,
+    "name": "BARLEY HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 179,
+    "name": "WINTER_WHEAT",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 181,
+    "name": "WINTER_BARLEY",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 64,
+    "name": "SAND",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 25,
+    "name": "CLAY",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 133,
+    "name": "HEMP SEEDS",
+    "category": "SEEDS"
+  },
+  {
+    "id": 134,
+    "name": "HEMP OIL",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 135,
+    "name": "LINSEED OIL ",
+    "category": "CONSUMABLES"
+  },
+  {
+    "id": 88,
+    "name": "HOPS HARVEST",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 105,
+    "name": "COW_HIDES RAW",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 106,
+    "name": "SHEEP_HIDES RAW",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 107,
+    "name": "SALO RAW",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 13,
+    "name": "FALLOW",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 51,
+    "name": "REEDS",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 24,
+    "name": "GRASS",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 37,
+    "name": "TOOLS",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 45,
+    "name": "PAPER",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 15,
+    "name": "RES_15",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 19,
+    "name": "RES_19",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 20,
+    "name": "RES_20",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 29,
+    "name": "RES_29",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 43,
+    "name": "RES_43",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 52,
+    "name": "RES_52",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 53,
+    "name": "RES_53",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 54,
+    "name": "RES_54",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 55,
+    "name": "RES_55",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 56,
+    "name": "RES_56",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 62,
+    "name": "RES_62",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 66,
+    "name": "RES_66",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 67,
+    "name": "RES_67",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 68,
+    "name": "RES_68",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 77,
+    "name": "RES_77",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 78,
+    "name": "RES_78",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 117,
+    "name": "RES_117",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 118,
+    "name": "RES_118",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 120,
+    "name": "RES_120",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 121,
+    "name": "RES_121",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 122,
+    "name": "RES_122",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 125,
+    "name": "RES_125",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 126,
+    "name": "RES_126",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 127,
+    "name": "RES_127",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 128,
+    "name": "RES_128",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 129,
+    "name": "RES_129",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 130,
+    "name": "RES_130",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 131,
+    "name": "RES_131",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 132,
+    "name": "RES_132",
+    "category": "UNCATEGORIZED"
+  },
+  {
+    "id": 136,
+    "name": "RES_136",
+    "category": "UNCATEGORIZED"
+  }
+]
