@@ -9,7 +9,7 @@ namespace OstrivStudio;
 
 public sealed class RetailAssignmentsWindow : Window
 {
-    private sealed record Row(string Shop, string Item, string Stored, string Reserved, string OtherRecords);
+    private sealed record Row(string Shop, string Item, string Stored, string Reserved, string OtherRecords, string Editing);
 
     public RetailAssignmentsWindow(RetailAssignmentSnapshot snapshot, IReadOnlyDictionary<ulong, BuildingRow> buildings,
         IReadOnlyDictionary<int, string> names)
@@ -29,7 +29,7 @@ public sealed class RetailAssignmentsWindow : Window
         footer.Children.Add(new Button { Content = "Close", IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) });
         var grid = new DataGrid { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, SelectionMode = DataGridSelectionMode.Single };
         void Column(string headingText, string property, double width) => grid.Columns.Add(new DataGridTextColumn { Header = headingText, Binding = new Binding(property), Width = new DataGridLength(width, DataGridLengthUnitType.Star) });
-        Column("Shop", nameof(Row.Shop), 1.4); Column("Assigned item", nameof(Row.Item), 1.7); Column("Stored", nameof(Row.Stored), 1); Column("Reserved", nameof(Row.Reserved), 1); Column("Other records", nameof(Row.OtherRecords), 1.2);
+        Column("Shop", nameof(Row.Shop), 1.4); Column("Assigned item", nameof(Row.Item), 1.7); Column("Stored", nameof(Row.Stored), 1); Column("Reserved", nameof(Row.Reserved), 1); Column("Other records", nameof(Row.OtherRecords), 1.2); Column("Editing", nameof(Row.Editing), 1.7);
         string Amount(double value) => value.ToString("N2", CultureInfo.CurrentCulture);
         grid.ItemsSource = snapshot.Buildings.SelectMany(shop => shop.AssignedResourceIds.Select(id =>
         {
@@ -38,7 +38,7 @@ public sealed class RetailAssignmentsWindow : Window
                 names.GetValueOrDefault(id, $"Unknown resource {id}"),
                 Amount(records.Where(r => r.Status == 0).Sum(r => (double)r.Amount)),
                 Amount(records.Where(r => r.Status == 1).Sum(r => (double)r.Amount)),
-                records.Any(r => r.Status is not (0 or 1)) ? "Present" : "None");
+                records.Any(r => r.Status is not (0 or 1)) ? "Present" : "None", shop.StockEditStatus(id));
         })).ToArray();
         root.Children.Add(grid); Content = root;
     }

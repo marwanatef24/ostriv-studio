@@ -47,6 +47,11 @@ internal static class RuleMonitorTests
         report = RuleMonitor.Assess(scan, settings);
         Check(report.Rows.Where(r => r.ResourceId == 14).All(r => r.State == "Conflicting rules"), "overlapping wildcard rules are flagged");
         settings.MaintenanceRules.RemoveAt(settings.MaintenanceRules.Count - 1);
+        var unsupported = new AutomationProfileSettings { MaintenanceRules = [
+            new() { ResourceId = 8, BuildingType = "building_rowhouse_shop", Enabled = true, Target = 50 },
+            new() { ResourceId = 7, BuildingType = "building_rowhouse_shop", Enabled = true, Target = 101 } ] };
+        var unsupportedReport = RuleMonitor.Assess(scan, unsupported);
+        Check(unsupportedReport.Rows.All(r => r.State == "Not supported"), "read-only rule checks explain unsupported shop goods and excessive targets before automation starts");
         try { RuleMonitor.Assess(scan with { Complete = false }, settings); throw new Exception("Incomplete scan accepted"); }
         catch (InvalidOperationException) { Console.WriteLine("PASS rule monitor rejects incomplete scans"); }
 

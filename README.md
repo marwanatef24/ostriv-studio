@@ -16,8 +16,8 @@ The installer includes the Windows x64 runtime. Installed copies check for updat
 
 Search the building list by building or stock name. Each row summarizes its observed stored resources; select a row to inspect its inventory and stock mix. Use **All**, **Same type**, Ctrl-click or Shift-click to select several candidates. The stock mix shows the largest observed resources for the selected building, as shares of its observed stored stock. Candidate labels and amounts are snapshots, not persistent in-game building identifiers; verify them against Ostriv before a write and scan again after loading a settlement.
 
-- Choose **Add once** under Resources to preview a positive addition to an existing supported stored resource in each selected building. It does not create a saved rule or add a missing stock entry.
-- Choose **Keep stocked** to save a minimum quantity in the selected profile. A rule applies to matching buildings of the chosen type; it is not pinned to a particular building instance.
+- Choose **Add once**, enter the amount on the building screen, and review a positive addition to an existing supported stored resource in each selected building. It does not create a saved rule or add a missing stock entry.
+- Choose **Keep stocked**, enter a quantity, and save a minimum in the selected profile. A rule applies to matching buildings of the chosen type; it is not pinned to a particular building instance.
 - **Resource overview** shows the observed stock breakdown, session history and CSV export. Candidate totals can overlap and need not match the town total.
 
 Before a write, choose the currently loaded save. The app copies and verifies it and the autosaves into a backup folder and asks you to check the selected candidates. It cannot prove that the selected save is the one currently loaded. If a batch reports a partial or uncertain write, do not save the game; close Ostriv and restore the backup. Ostriv can autosave even while paused.
@@ -26,7 +26,7 @@ Before a write, choose the currently loaded save. The app copies and verifies it
 
 Open **Saved rules** to create or import a profile. Choose **Each building** to maintain a minimum separately in each matching building, or **Across buildings** to maintain one combined minimum for supported existing stock. Profiles, enabled switches, capacity settings and intervals persist when the editor is reopened; they do not store process addresses.
 
-Open **Start saved rules**, review a complete scan, select the loaded save for backup and start the runner. Supported stock and capacity rules are reapplied while that monitor remains open. Capacity minimums currently cover granaries, warehouses and big hay barracks. Capacity can reset when the game reloads: scan, review and start the monitor again after loading. Automation does not start on its own when the editor opens, and it stops when the game session or candidate set changes, a scan is incomplete, or a write fails. Unsupported rules are reported as skipped.
+Choose **Start saved rules**. After the scan, select the loaded save for backup and confirm to start the runner; cancel to make no edits. Supported stock and capacity rules are reapplied while that monitor remains open. Capacity minimums currently cover granaries, warehouses and big hay barracks. Capacity can reset when the game reloads: scan, review and start the monitor again after loading. Automation does not start on its own when the editor opens, and it stops when the game session or candidate set changes, a scan is incomplete, or a write fails. Unsupported rules are reported as skipped.
 
 Profiles live at `%LOCALAPPDATA%\OstrivStudio\profiles.json`. The optional `OSTRIV_STUDIO_DATA_DIR` environment variable changes that directory. **Import original rules…** copies supported rules from the original editor's `.userpref` file into a new profile without changing the source. Close the original editor before importing where possible; other preferences are not imported.
 
@@ -40,7 +40,7 @@ For deals, open the world map in Ostriv, select a city with an active deal, scan
 
 ## Markets
 
-Use **Find shops** under Markets, select one or more, then use **Assigned goods…** to see what they sell and the empty assignment slots. Stock figures are from the last scan and may differ from Ostriv's display. Choose Buckwheat, Clothes, Shoes or Warm Clothes to add once or save a minimum up to the normal 100-unit retail target. **Set up shop rules…** creates missing rules for clothes, shoes and warm clothes without replacing existing rules; add a buckwheat rule separately if wanted, and start the saved-rule monitor to apply rules. These controls support existing records only. Salt, other retail goods, market stalls and missing retail records are blocked.
+Use **Find shops** under Markets, select one or more, then use **Assigned goods…** to see what they sell and the empty assignment slots. Stock figures are from the last scan and may differ from Ostriv's display. Choose Buckwheat, Clothes, Shoes or Warm Clothes to add once or save a minimum up to the normal 100-unit retail target. **Set up shop rules…** creates missing rules for buckwheat, clothes, shoes and warm clothes without replacing existing rules; and start the saved-rule monitor to apply rules. These controls support existing records only. Salt, other retail goods, market stalls and missing retail records are blocked.
 
 ## Build and test
 

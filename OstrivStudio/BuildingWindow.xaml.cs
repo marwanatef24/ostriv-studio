@@ -148,7 +148,7 @@ public partial class BuildingWindow : Window
                 throw new InvalidOperationException("The selected profile changed in another window. Reopen profiles and try again.");
             var rules = fresh.AutomationProfiles[fresh.SelectedProfile].MaintenanceRules;
             int[] missing = MarketRulePlanner.MissingShopRules(rules);
-            if (missing.Length == 0) { MessageBox.Show(this, "All three shop rules already exist. Open Saved rules to review them; nothing was changed.", "Shop rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+            if (missing.Length == 0) { MessageBox.Show(this, "All supported shop rules already exist. Open Saved rules to review them; nothing was changed.", "Shop rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
             string names = string.Join(", ", missing.Select(id => _resourceNames.GetValueOrDefault(id, $"Resource {id}")));
             var dialog = new KeepStockedWindow(names, "rowhouse shop", fresh.SelectedProfile, null, 100, multiple: true) { Owner = this };
             if (dialog.ShowDialog() != true) return;
@@ -164,6 +164,7 @@ public partial class BuildingWindow : Window
     }
     private void ResourceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateActions();
     private void ActionIntent_Changed(object sender, RoutedEventArgs e) => UpdateActions();
+    private void ActionAmount_Changed(object sender, TextChangedEventArgs e) => UpdateActions();
     private void ReviewAction_Click(object sender, RoutedEventArgs e)
     {
         if (HoldIntent.IsChecked == true) KeepStocked_Click(sender, e);
@@ -171,12 +172,13 @@ public partial class BuildingWindow : Window
     }
     private void UpdateActions()
     {
-        if (ReviewActionButton is null || BuildingGrid is null || LiveResourceGrid is null) return;
+        if (ReviewActionButton is null || BuildingGrid is null || LiveResourceGrid is null || ActionAmount is null || AmountLabel is null) return;
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         var resource = LiveResourceGrid.SelectedItem as LiveResourceRow;
         bool hold = HoldIntent.IsChecked == true;
         ActionResource.Text = resource is null ? "Select a resource above" : $"{resource.Name} · {selected.Length} selected building(s)";
-        ReviewActionButton.Content = hold ? "Set up a saved rule…" : "Choose amount to add…";
+        ReviewActionButton.Content = hold ? "Save rule" : "Review addition…";
+        AmountLabel.Text = hold ? "Minimum quantity per building" : "Amount to add to each selected building";
         bool supported = resource is not null && selected.Length > 0 && selected.All(b => ExistingRuleExecutor.SupportsExisting(b.Candidate.ClassName, resource.Id));
         ReviewActionButton.IsEnabled = _snapshot is not null && supported && (!hold || selected.Select(b => b.Candidate.ClassName).Distinct().Count() == 1);
         ActionHint.Text = resource is null || selected.Length == 0 ? "Choose a building and a resource above." : !supported ?
@@ -448,12 +450,14 @@ public partial class BuildingWindow : Window
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         if (_snapshot is null || selected.Length == 0 || LiveResourceGrid.SelectedItem is not LiveResourceRow resource)
         { MessageBox.Show(this, "Select buildings and one resource first.", "Add stock once", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (!decimal.TryParse(ActionAmount.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var amount) || amount <= 0 || amount > 1_000_000_000m || decimal.Truncate(amount) != amount)
+        { MessageBox.Show(this, "Enter a positive whole-unit amount to add, up to 1,000,000,000.", "Add stock once", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         new AddStockWindow(_snapshot, selected, resource, () =>
         {
             _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
             ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "The one-time stock action invalidated the previous snapshot.";
             BottomStatus.Text = "Check the game before saving; reload the backup if anything is unexpected.";
-        }) { Owner = this }.ShowDialog();
+        }, amount) { Owner = this }.ShowDialog();
     }
     private void KeepStocked_Click(object sender, RoutedEventArgs e)
     {
@@ -471,14 +475,14 @@ public partial class BuildingWindow : Window
                 throw new InvalidOperationException("The selected profile changed in another window. Reopen profiles and try again.");
             var settings = fresh.AutomationProfiles[fresh.SelectedProfile];
             var existing = settings.MaintenanceRules.SingleOrDefault(r => r.ResourceId == resource.Id && string.Equals(r.BuildingType.Trim(), type, StringComparison.OrdinalIgnoreCase));
-            var dialog = new KeepStockedWindow(resource.Name, DisplayName(type["building_".Length..]), fresh.SelectedProfile, existing?.Target,
-                type == "building_rowhouse_shop" ? 100 : 1_000_000_000m) { Owner = this };
-            if (dialog.ShowDialog() != true) return;
+            decimal maximum = type == "building_rowhouse_shop" ? 100 : 1_000_000_000m;
+            if (!decimal.TryParse(ActionAmount.Text, NumberStyles.Number, CultureInfo.CurrentCulture, out var target) || target <= 0 || target > maximum || (decimal)(float)target != target)
+                throw new InvalidOperationException($"Enter a positive, exactly representable minimum up to {maximum:N0}.");
             if (existing is not null && MessageBox.Show(this, "This replaces the existing rule for this resource and building type with an enabled per-building rule. Continue?", "Replace existing rule?", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             byte[] after = File.Exists(_settingsPath) ? SHA256.HashData(File.ReadAllBytes(_settingsPath)) : [];
             if (!before.AsSpan().SequenceEqual(after)) throw new InvalidOperationException("The profile changed while editing. No rule was saved; try again.");
             if (existing is null) { existing = new MaintenanceRule { ResourceId = resource.Id, BuildingType = type }; settings.MaintenanceRules.Add(existing); }
-            existing.Target = dialog.Target; existing.Enabled = true; existing.Mode = MaintenanceMode.Each; existing.BuildingLimit = -1;
+            existing.Target = target; existing.Enabled = true; existing.Mode = MaintenanceMode.Each; existing.BuildingLimit = -1;
             ProfileStore.Save(_settingsPath, fresh); _state = fresh;
             BottomStatus.Text = $"Saved a {resource.Name} rule in {fresh.SelectedProfile}. Start the rule monitor to apply it.";
             MessageBox.Show(this, "Rule saved. Start the rule monitor to keep this quantity stocked while you play.", "Rule saved", MessageBoxButton.OK, MessageBoxImage.Information);

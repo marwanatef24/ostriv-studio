@@ -51,6 +51,10 @@ internal static class RetailAssignmentsTests
             snapshot.Buildings[0].AssignedResourceIds.SequenceEqual([46, 8]) && snapshot.Buildings[1].AssignedResourceIds.SequenceEqual([11, 12]),
             "store assignments are read without writing and preserve empty slots");
         Check(!RetailAssignments.SupportsClass("building_shop"), "unverified market stall assignments remain blocked");
+        Check(snapshot.Buildings[0].StockEditStatus(46) == "Available to review" &&
+            snapshot.Buildings[0].StockEditStatus(7) == "No stored record" &&
+            snapshot.Buildings[0].StockEditStatus(8) == "Not supported yet",
+            "shop goods distinguish supported records, missing records and unsupported goods");
         Reject(() => RetailAssignments.Capture(scan with { GameSha256 = "unknown" }, shops, memory), "shop assignments reject unknown game builds");
         Reject(() => RetailAssignments.Capture(scan with { Complete = false }, shops, memory), "shop assignments reject incomplete scans");
         Reject(() => RetailAssignments.Capture(scan, [shops[0], shops[0]], memory), "shop assignments reject duplicate candidates");

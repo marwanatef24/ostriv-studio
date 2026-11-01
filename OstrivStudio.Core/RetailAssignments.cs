@@ -10,6 +10,14 @@ namespace OstrivStudio.Core;
 public sealed record RetailAssignment(BuildingCandidate Building, IReadOnlyList<int> SlotIds)
 {
     public IEnumerable<int> AssignedResourceIds => SlotIds.Where(id => id != 0);
+
+    // A supported type and observed record permit review only; the write
+    // path still verifies the live object and all safety checks independently.
+    public string StockEditStatus(int id) => !ExistingRuleExecutor.SupportsExisting(Building.ClassName, id)
+        ? "Not supported yet"
+        : !Building.Resources.Any(r => r.Id == id && r.Status == 0)
+            ? "No stored record"
+            : "Available to review";
 }
 public sealed record RetailAssignmentSnapshot(DiscoveryResult Scan, IReadOnlyList<RetailAssignment> Buildings);
 

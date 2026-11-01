@@ -1,5 +1,7 @@
 # Testing and evidence
 
+For 0.2.7, an isolated copy of the saved profile was used with a read-only scan of a running settlement. Entering 1 on the building screen produced a reviewed 500-to-501 potash addition without applying it; entering 501 saved an ashery rule in the isolated profile. Starting saved rules opened the backup chooser after its scan, and cancelling it made no edit. The real profile hash remained unchanged. These checks did not establish that the runner successfully writes during this session or that other game versions are supported.
+
 For 0.2.6, the redesigned workspace was exercised with a separate copy of the existing profile and a read-only scan of the supported game build. Building search and same-type selection found five rowhouse shops, and their stock and available actions were displayed. No editor write was performed in this test. The automated suite passed 257 checks, including cyclic crop-pattern matching. The original profile was not changed.
 
 The test suite exercises simulated memory, profile persistence, bulk planning, capacity rules, farm settings, trade-list validation, stale snapshots and partial-write failures. It does not prove that arbitrary game objects or a new executable are safe.

@@ -112,7 +112,10 @@
               <RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" Tag="One change to the selected buildings" Style="{StaticResource ActionChoice}" IsChecked="True" Checked="ActionIntent_Changed" Margin="0,0,5,0"/>
               <RadioButton Grid.Column="1" x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Tag="Save a minimum for this building type" Style="{StaticResource ActionChoice}" Checked="ActionIntent_Changed" Margin="5,0,0,0"/>
             </Grid>
-            <Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="ActionHint" Text="Choose a building and resource." Foreground="#607669" FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,10,0"/><Button Grid.Column="1" x:Name="ReviewActionButton" Content="Choose amount to add…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#226D53" Foreground="White" BorderThickness="0" IsEnabled="False"/></Grid>
+            <Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel Margin="0,0,12,0"><TextBlock x:Name="AmountLabel" Text="Amount to add to each selected building" FontWeight="SemiBold" FontSize="11"/><TextBox x:Name="ActionAmount" AutomationProperties.Name="Quantity" Padding="9,7" Margin="0,5,0,0" TextChanged="ActionAmount_Changed"/><TextBlock x:Name="ActionHint" Text="Choose a building and resource." Foreground="#607669" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel>
+              <Button Grid.Column="1" x:Name="ReviewActionButton" Content="Review addition…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#226D53" Foreground="White" BorderThickness="0" IsEnabled="False" VerticalAlignment="Center"/>
+            </Grid>
           </StackPanel></Border>
         </Grid>
       </Border>
