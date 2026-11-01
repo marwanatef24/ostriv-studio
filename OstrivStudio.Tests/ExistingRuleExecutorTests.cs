@@ -56,9 +56,12 @@ internal static class ExistingRuleExecutorTests
             "retail resource IDs match the shipped resource catalog");
         var existingShopRules = new[] { new MaintenanceRule { BuildingType = " BUILDING_ROWHOUSE_SHOP ", ResourceId = 46, Target = 37, Enabled = false },
             new MaintenanceRule { BuildingType = "building_warehouse", ResourceId = 47, Target = 500, Enabled = true } };
-        Check(MarketRulePlanner.MissingShopRules(existingShopRules).SequenceEqual([47, 93]) &&
+        Check(MarketRulePlanner.MissingShopRules(existingShopRules).SequenceEqual([7, 47, 93]) &&
             existingShopRules[0].Target == 37 && !existingShopRules[0].Enabled && existingShopRules[1].Target == 500,
-            "shop rule setup leaves existing settings intact and adds only missing shop goods");
+            "shop rule setup includes buckwheat and leaves existing settings intact");
+        var allShopRules = new[] { 7, 46, 47, 93 }.Select(id => new MaintenanceRule { BuildingType = "building_rowhouse_shop", ResourceId = id });
+        Check(MarketRulePlanner.MissingShopRules(allShopRules).Length == 0,
+            "shop rule setup recognizes all four supported goods");
         Check(new[] {7,46,47,93}.All(id => ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", id)) &&
             !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 26) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
             "retail edits allow existing buckwheat, clothes, shoes and warm clothes; salt is blocked");

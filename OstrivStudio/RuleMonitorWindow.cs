@@ -18,12 +18,13 @@ public sealed class RuleMonitorWindow : Window
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14) };
     private readonly TextBlock _description = new() { TextWrapping = TextWrapping.Wrap };
     private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, CanUserDeleteRows = false };
-    private readonly Button _start = new() { Content = "Start monitoring", MinWidth = 140, Margin = new Thickness(0, 0, 8, 0) };
+    private readonly Button _start = new() { Content = "Check rules again", MinWidth = 140, Margin = new Thickness(0, 0, 8, 0) };
     private readonly Button _stop = new() { Content = "Stop", MinWidth = 90, IsEnabled = false };
-    private readonly Button _runRules = new() { Content = "Start keeping stock…", MinWidth = 180, Margin = new Thickness(8, 0, 0, 0), IsEnabled = false };
+    private readonly Button _runRules = new() { Content = "Start automation…", MinWidth = 180, Margin = new Thickness(8, 0, 0, 0), IsEnabled = false, Background = new SolidColorBrush(Color.FromRgb(34, 109, 83)), Foreground = Brushes.White };
     private CancellationTokenSource? _cancellation;
     private TaskCompletionSource<bool>? _stopped;
     private bool _runningRules;
+    private bool _startAfterFirstScan = true;
     private bool _closed, _closeRequested;
     private RuleMonitorReport? _reviewedReport;
     private byte[]? _reviewedSettingsHash;
@@ -32,15 +33,15 @@ public sealed class RuleMonitorWindow : Window
     public RuleMonitorWindow(string settingsPath, string profile, string gamePath, IReadOnlyDictionary<int, string> resources)
     {
         _settingsPath = settingsPath; _profile = profile; _gamePath = gamePath; _resources = resources;
-        Title = "Monitor saved rules"; Width = 1180; Height = 690; MinWidth = 850; MinHeight = 500;
+        Title = "Start saved rules"; Width = 1180; Height = 690; MinWidth = 850; MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9"));
         Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17253A"));
         var root = new DockPanel { Margin = new Thickness(25) };
         var header = new StackPanel();
-        header.Children.Add(new TextBlock { Text = "Monitor saved rules", FontFamily = new FontFamily("Georgia"), FontSize = 29 });
+        header.Children.Add(new TextBlock { Text = "Start saved rules", FontFamily = new FontFamily("Georgia"), FontSize = 29 });
         header.Children.Add(new TextBlock { Text = $"Profile: {_profile}", Margin = new Thickness(0, 5, 0, 5), Foreground = new SolidColorBrush(Color.FromRgb(139, 77, 18)) });
-        _description.Text = "READ ONLY · Rules are checked repeatedly, but no automatic game edits are made. Detected buildings are candidates, not confirmed active buildings.";
+        _description.Text = "CHECKING ONLY · No quantities change yet. After the scan, choose your loaded save for backup and confirm to start automation. Leave this window open while you play.";
         header.Children.Add(_description);
         header.Children.Add(_status); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
@@ -100,7 +101,8 @@ public sealed class RuleMonitorWindow : Window
         { MessageBox.Show(this, ex.Message, "Automation", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
             InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
+        _status.Text = "Choose the loaded save for backup, then confirm to start automation.";
+        if (select.ShowDialog(this) != true) { _status.Text = "Automation was not started. Choose Start automation to try again."; return; }
         SaveBackup.SessionBackup backup;
         try
         {
@@ -124,7 +126,7 @@ public sealed class RuleMonitorWindow : Window
         _start.IsEnabled = false; _runRules.IsEnabled = false; _stop.IsEnabled = true;
         _description.Text = runRules
             ? "EXPERIMENTAL AUTOMATION · The game briefly pauses for each edit. Avoid changing speed while an edit is in progress; closing this window stops the runner."
-            : "READ ONLY · Rules are checked repeatedly, but no automatic game edits are made. Detected buildings are candidates, not confirmed active buildings.";
+            : "CHECKING ONLY · No quantities change yet. After the scan, choose your loaded save for backup and confirm to start automation. Leave this window open while you play.";
         _status.Text = "Scanning the running game. This can take a little while…";
         byte[]? profileHashAtScan = null;
         var progress = new Progress<RuleMonitorReport>(report =>
@@ -133,7 +135,12 @@ public sealed class RuleMonitorWindow : Window
             _reviewedReport = report; _reviewedSettingsHash = profileHashAtScan?.ToArray();
             ShowRows(report, null);
             _runRules.IsEnabled = _reviewedSettingsHash is not null;
-            _status.Text = $"Checked {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s) at {report.ObservedUtc.ToLocalTime():T}. Waiting for the profile's interval before the next scan.";
+            _status.Text = $"Check complete: {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s). Select Start automation to apply supported rules; checking alone does not edit the game.";
+            if (_startAfterFirstScan && _runRules.IsEnabled)
+            {
+                _startAfterFirstScan = false;
+                _ = StartRulesAsync();
+            }
         });
         var ruleProgress = new Progress<ExistingRuleTick>(tick =>
         {
@@ -209,7 +216,11 @@ public sealed class RuleMonitorWindow : Window
                     report => ((IProgress<RuleMonitorReport>)progress).Report(report), Task.Delay, cts.Token);
         }
         catch (OperationCanceledException) { if (!_closed) _status.Text = runRules ? "Automation stopped. Check Ostriv before saving." : "Monitoring stopped. No game changes were made."; }
-        catch (Exception ex) { if (!_closed) _status.Text = runRules ? "Automation stopped. A write may be partial; reload the backup without saving if uncertain. " + ex.Message + " Backup: " + backupDirectory : "Monitoring stopped: " + ex.Message; }
+        catch (Exception ex)
+        {
+            if (!runRules) { _reviewedReport = null; _reviewedSettingsHash = null; }
+            if (!_closed) _status.Text = runRules ? "Automation stopped. A write may be partial; reload the backup without saving if uncertain. " + ex.Message + " Backup: " + backupDirectory : "Rule check stopped: " + ex.Message;
+        }
         finally
         {
             cts.Dispose(); _cancellation = null; _runningRules = false; _stopped = null; stopped.TrySetResult(true);

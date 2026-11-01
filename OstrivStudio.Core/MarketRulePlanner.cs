@@ -8,6 +8,6 @@ public static class MarketRulePlanner
         ArgumentNullException.ThrowIfNull(rules);
         var existing = rules.Where(r => r.BuildingType.Trim().Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase))
             .Select(r => r.ResourceId).ToHashSet();
-        return new[] { 46, 47, 93 }.Where(id => !existing.Contains(id)).ToArray();
+        return new[] { 7, 46, 47, 93 }.Where(id => !existing.Contains(id)).ToArray();
     }
 }

@@ -24,6 +24,7 @@ public sealed class TradeDealsWindow : Window
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly Button _refresh = new() { Content = "Refresh deals" }, _findStock = new() { Content = "Find stock buildings", IsEnabled = false };
     private readonly Button _prepare = new() { Content = "Use remaining as export target…", IsEnabled = false };
+    private readonly Button _editTargets = new() { Content = "Edit building targets…", IsEnabled = false, Margin = new Thickness(8, 0, 0, 0) };
     private readonly ComboBox _post = new() { Width = 260, Margin = new Thickness(0, 0, 10, 0) };
     private sealed record PostChoice(BuildingRow Building) { public override string ToString() => Building.Name + "  ·  " + Building.Summary; }
     private readonly PostChoice[] _choices;
@@ -48,9 +49,9 @@ public sealed class TradeDealsWindow : Window
         top.Children.Add(new TextBlock { Text = "Open the world map in Ostriv and select a city. Deals refresh every five seconds. Select deals with Ctrl or Shift to allocate exports. Building stock is from the last scan.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
         top.Children.Add(_status);
         var action = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
-        action.Children.Add(_post); action.Children.Add(_prepare); top.Children.Add(action);
+        action.Children.Add(_post); action.Children.Add(_prepare); action.Children.Add(_editTargets); top.Children.Add(action);
         var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        _refresh.Click += Refresh_Click; _findStock.Click += Find_Click; _prepare.Click += Prepare_Click;
+        _refresh.Click += Refresh_Click; _findStock.Click += Find_Click; _prepare.Click += Prepare_Click; _editTargets.Click += EditTargets_Click;
         _allocate.Click += Allocate_Click;
         bottom.Children.Add(_refresh); bottom.Children.Add(_findStock); bottom.Children.Add(_allocate); bottom.Children.Add(new Button { Content = "Close", IsCancel = true });
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom); root.Children.Add(_grid); Content = root;
@@ -75,6 +76,7 @@ public sealed class TradeDealsWindow : Window
         _prepare.IsEnabled = selectedRows.Length == 1 && _grid.SelectedItem is Row row && !row.Deal.IsImport &&
             row.Deal.Remaining > 0 && row.Deal.Remaining <= 1_000_000 && _post.SelectedItem is PostChoice choice &&
             choice.Building.Candidate.ClassName == row.Deal.TradingBuildingClass;
+        _editTargets.IsEnabled = !_refreshing && !_modalOpen && _post.SelectedItem is PostChoice;
         var selectedDeals = selectedRows.Select(r => r.Deal).ToArray();
         var route = selectedDeals.Select(d => d.TradingBuildingClass).Distinct().ToArray();
         _allocate.IsEnabled = selectedDeals.Length > 0 && selectedDeals.All(d => !d.IsImport && d.Remaining > 0 && d.Remaining <= 1_000_000)
@@ -128,12 +130,29 @@ public sealed class TradeDealsWindow : Window
         {
             if (IsLoaded) { _displayedDeals = null; _grid.ItemsSource = null; UpdateActions(); _status.Text = "Deals unavailable: " + ex.Message; }
         }
-        finally { _refreshing = false; if (IsLoaded) _refresh.IsEnabled = true; }
+        finally { _refreshing = false; if (IsLoaded) { _refresh.IsEnabled = true; UpdateActions(); } }
     }
     private void Find_Click(object sender, RoutedEventArgs e)
     {
         if (_grid.SelectedItem is not Row row || row.Deal.TradingBuildingClass is not string type) return;
         _pending = (row.Deal.ResourceId, type); Close();
+    }
+    private async void EditTargets_Click(object sender, RoutedEventArgs e)
+    {
+        if (_refreshing || _modalOpen || _post.SelectedItem is not PostChoice post) return;
+        _modalOpen = true; _editTargets.IsEnabled = false; _prepare.IsEnabled = false; _refresh.IsEnabled = false;
+        _status.Text = "Checking this trading building's export targets…";
+        try
+        {
+            var limits = await Task.Run(() => TradingStockLimits.CaptureFromGame(_scan, [post.Building.Candidate]));
+            if (!IsLoaded) return;
+            new TradingLimitsWindow(limits, [post.Building], _names, () => { _invalidate(); _invalidated = true; }) { Owner = this }.ShowDialog();
+            if (_invalidated) { Close(); return; }
+            if (IsLoaded) _status.Text = "The target editor is closed. Stock amounts are from the last building scan.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception or OverflowException)
+        { if (IsLoaded) _status.Text = ex.Message; }
+        finally { _modalOpen = false; if (IsLoaded) { _refresh.IsEnabled = true; UpdateActions(); } }
     }
     private async void Prepare_Click(object sender, RoutedEventArgs e)
     {

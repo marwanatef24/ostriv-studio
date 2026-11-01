@@ -12,7 +12,7 @@ namespace OstrivStudio;
 public sealed class TradingLimitsWindow : Window
 {
     private sealed record ResourceChoice(int Id, string Name) { public override string ToString() => Name; }
-    private sealed record Row(string Building, string Current, string Result);
+    private sealed record Row(string Building, string Stock, string Current, string Result);
     private readonly TradingLimitsSnapshot _snapshot;
     private readonly BuildingRow[] _selected;
     private readonly Action _invalidate;
@@ -37,6 +37,7 @@ public sealed class TradingLimitsWindow : Window
             .Select(id => new ResourceChoice(id, names.GetValueOrDefault(id, $"Resource {id}"))).ToArray();
         _resource.ItemsSource = common;
         _grid.Columns.Add(new DataGridTextColumn { Header = "Trading building", Binding = new Binding(nameof(Row.Building)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
+        _grid.Columns.Add(new DataGridTextColumn { Header = "Stock at scan", Binding = new Binding(nameof(Row.Stock)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Current target", Binding = new Binding(nameof(Row.Current)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Preview", Binding = new Binding(nameof(Row.Result)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         var root = new DockPanel { Margin = new Thickness(26) };
@@ -60,7 +61,18 @@ public sealed class TradingLimitsWindow : Window
             : requiredDeal is null ? "Choose a resource and a minimum target, then preview the changes."
             : "The remaining deal quantity is prefilled. Keep the city’s deal list open; it will be checked again before writing.";
     }
-    private void ResetReview() { _reviewed = null; _apply.IsEnabled = false; _grid.ItemsSource = null; }
+    private Row[] RowsFor(int resourceId, decimal? target) => _snapshot.Posts.Select((p, i) =>
+    {
+        float current = p.Limits.Single(x => x.ResourceId == resourceId).Target;
+        double stock = BuildingDiscovery.Summarize(p.Building.Resources).Where(x => x.Id == resourceId).Sum(x => x.Stored);
+        string result = target is null ? "Enter a target above" : (decimal)current >= target.Value ? "Already at or above target" : $"Increase to {target.Value:N0}";
+        return new Row(_selected[i].Name, stock.ToString("N2", CultureInfo.CurrentCulture), current.ToString("N0", CultureInfo.CurrentCulture), result);
+    }).ToArray();
+    private void ResetReview()
+    {
+        _reviewed = null; _apply.IsEnabled = false;
+        _grid.ItemsSource = _resource.SelectedItem is ResourceChoice resource ? RowsFor(resource.Id, null) : null;
+    }
     private void Preview()
     {
         ResetReview();
@@ -69,11 +81,7 @@ public sealed class TradingLimitsWindow : Window
         try
         {
             int count = TradingStockLimits.CountChanges(_snapshot, resource.Id, target);
-            _grid.ItemsSource = _snapshot.Posts.Select((p, i) =>
-            {
-                float current = p.Limits.Single(x => x.ResourceId == resource.Id).Target;
-                return new Row(_selected[i].Name, current.ToString("N0", CultureInfo.CurrentCulture), (decimal)current >= target ? "Already at or above target" : $"Increase to {target:N0}");
-            }).ToArray();
+            _grid.ItemsSource = RowsFor(resource.Id, target);
             _reviewed = (resource.Id, target); _apply.IsEnabled = count > 0;
             _status.Text = count == 0 ? "All selected buildings are already at or above this target." : $"{count} building(s) will be increased. Verify each candidate in Ostriv before applying.";
         }

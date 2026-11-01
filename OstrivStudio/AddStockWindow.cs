@@ -23,7 +23,7 @@ public sealed class AddStockWindow : Window
     private decimal? _reviewedAmount;
     private bool _busy;
 
-    public AddStockWindow(DiscoveryResult scan, BuildingRow[] buildings, LiveResourceRow resource, Action invalidate)
+    public AddStockWindow(DiscoveryResult scan, BuildingRow[] buildings, LiveResourceRow resource, Action invalidate, decimal? initialAmount = null)
     {
         _scan = scan; _buildings = buildings; _resource = resource; _invalidate = invalidate;
         Title = "Add stock once"; Width = 850; Height = 590; MinWidth = 700; MinHeight = 470;
@@ -48,7 +48,8 @@ public sealed class AddStockWindow : Window
         _amount.TextChanged += (_, _) => { _reviewedAmount = null; _apply.IsEnabled = false; };
         Closing += (_, e) => { if (_busy) e.Cancel = true; };
         _status.Text = $"{buildings.Length} building(s) selected. Enter a whole-unit amount to add.";
-        Loaded += (_, _) => _amount.Focus();
+        if (initialAmount.HasValue) _amount.Text = initialAmount.Value.ToString(CultureInfo.CurrentCulture);
+        Loaded += (_, _) => { if (initialAmount.HasValue) Preview(); else _amount.Focus(); };
     }
     private static DataGridTextColumn Column(string title, string property, double width) =>
         new() { Header = title, Binding = new Binding(property), Width = new DataGridLength(width, DataGridLengthUnitType.Star) };

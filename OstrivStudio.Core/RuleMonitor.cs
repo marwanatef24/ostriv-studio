@@ -62,6 +62,10 @@ public static class RuleMonitor
             if (rule.BuildingLimit == 0) { rows.Add(Row(0, null, "No buildings selected", "The rule's building limit is zero.")); continue; }
             if (rules.Where((_, i) => i != index).Any(other => other is not null && other.Enabled && Overlaps(rule, other)))
             { rows.Add(Row(0, null, "Conflicting rules", "Another enabled rule can target the same resource and building.")); continue; }
+            if (!ExistingRuleExecutor.SupportsExisting(type, rule.ResourceId))
+            { rows.Add(Row(0, null, "Not supported", "Automatic edits for this building and resource are not supported.")); continue; }
+            if (type.Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase) && rule.Target > 100)
+            { rows.Add(Row(0, null, "Not supported", "Shop minimums are limited to 100.")); continue; }
 
             var matches = scan.Buildings.Where(b => type.Length == 0 || string.Equals(type, b.ClassName, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (matches.Length == 0) { rows.Add(Row(0, null, "No candidates", "No matching building candidate was found.")); continue; }

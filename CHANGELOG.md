@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.7 — visible quantities and clearer automation
+
+- Enter an addition or saved minimum directly on the building screen; review the addition before applying it.
+- Starting saved rules now checks the settlement, then opens the backup and confirmation flow. Unsupported rules are marked before running.
+- Shop rule setup includes supported buckwheat, and assigned goods show whether their stock is available to review.
+- Open existing export targets from the deals screen and see scanned stock beside the current and proposed targets. Direct deal editing and other unverified goods and building controls are still unavailable.
+
 ## 0.2.6 — original-inspired resource workspace
 
 - Open directly to a single workspace with building search, stock, one-time and saved actions, and building-specific tools together.
