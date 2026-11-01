@@ -15,6 +15,9 @@ internal static class TradeAllocationPlannerTests
         var assigned = TradeAllocationPlanner.Create(deals, buildings, TradeAllocationMode.Distribute);
         Check(assigned.Count == 2 && assigned[0].BuildingAddress == 0x10000 && assigned[1].BuildingAddress == 0x20000,
             "export resources can be assigned to buildings in turn");
+        var selectedOnly = TradeAllocationPlanner.Create(new[] { deals[2] }, buildings, TradeAllocationMode.Split);
+        Check(selectedOnly.Count == 2 && selectedOnly.All(p => p.ResourceId == 46) && selectedOnly.Sum(p => p.Minimum) == 40,
+            "allocating a selected deal excludes all unselected exports");
         foreach (var invalid in new[] { deals.Select(d => d with { CityId = 99 }).ToArray(), deals.Select(d => d with { CityId = 4 }).ToArray(), new[] { deals[0], deals[0] } })
         {
             try { TradeAllocationPlanner.Create(invalid, buildings, TradeAllocationMode.Split); throw new Exception("Invalid allocation accepted"); }

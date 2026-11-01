@@ -16,15 +16,14 @@ public sealed class TradeDealsWindow : Window
     private readonly Action<int, string> _find;
     private readonly Action _invalidate;
     private bool _invalidated;
-    private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Single, MinHeight = 180, Margin = new Thickness(0, 16, 0, 12) };
+    private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Extended, SelectionUnit = DataGridSelectionUnit.FullRow, MinHeight = 180, Margin = new Thickness(0, 16, 0, 12) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly Button _refresh = new() { Content = "Refresh deals" }, _findStock = new() { Content = "Find stock buildings", IsEnabled = false };
     private readonly Button _prepare = new() { Content = "Use remaining as export target…", IsEnabled = false };
     private readonly ComboBox _post = new() { Width = 260, Margin = new Thickness(0, 0, 10, 0) };
     private sealed record PostChoice(BuildingRow Building) { public override string ToString() => Building.Name + "  ·  " + Building.Summary; }
     private readonly PostChoice[] _choices;
-    private TradeDeal[] _visibleDeals = [];
-    private readonly Button _allocate = new() { Content = "Allocate exports across buildings…", IsEnabled = false };
+    private readonly Button _allocate = new() { Content = "Allocate selected exports…", IsEnabled = false };
     private (int Id, string Type)? _pending;
     public TradeDealsWindow(DiscoveryResult scan, IReadOnlyDictionary<int, string> names, IReadOnlyList<TradeDeal> deals, Action<int, string> find,
         IReadOnlyDictionary<ulong, BuildingRow> buildingRows, Action invalidate)
@@ -42,7 +41,7 @@ public sealed class TradeDealsWindow : Window
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         top.Children.Add(new TextBlock { Text = "Trade deals", FontWeight = FontWeights.SemiBold, FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Open the world map in Ostriv and select a city. This view reads that city’s visible deals; trading-stock amounts are from the last building scan.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
+        top.Children.Add(new TextBlock { Text = "Open the world map in Ostriv and select a city. Select deals with Ctrl or Shift to allocate only those exports. Trading stock is from the last building scan.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
         top.Children.Add(_status);
         var action = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
         action.Children.Add(_post); action.Children.Add(_prepare); top.Children.Add(action);
@@ -65,15 +64,18 @@ public sealed class TradeDealsWindow : Window
     private static string Amount(double value) => value.ToString("N2", CultureInfo.CurrentCulture);
     private void UpdateActions()
     {
-        _findStock.IsEnabled = _grid.SelectedItem is Row selected && selected.Deal.TradingBuildingClass is not null;
-        _prepare.IsEnabled = _grid.SelectedItem is Row row && !row.Deal.IsImport &&
+        var selectedRows = _grid.SelectedItems.OfType<Row>().ToArray();
+        _findStock.IsEnabled = selectedRows.Length == 1 && selectedRows[0].Deal.TradingBuildingClass is not null;
+        _prepare.IsEnabled = selectedRows.Length == 1 && _grid.SelectedItem is Row row && !row.Deal.IsImport &&
             row.Deal.Remaining > 0 && row.Deal.Remaining <= 1_000_000 && _post.SelectedItem is PostChoice choice &&
             choice.Building.Candidate.ClassName == row.Deal.TradingBuildingClass;
+        var selectedDeals = selectedRows.Select(r => r.Deal).ToArray();
+        var route = selectedDeals.Select(d => d.TradingBuildingClass).Distinct().ToArray();
+        _allocate.IsEnabled = selectedDeals.Length > 0 && selectedDeals.All(d => !d.IsImport && d.Remaining > 0 && d.Remaining <= 1_000_000)
+            && route.Length == 1 && route[0] is not null && _choices.Any(c => c.Building.Candidate.ClassName == route[0]);
     }
     private void ShowDeals(IReadOnlyList<TradeDeal> deals)
     {
-        _visibleDeals = deals.ToArray();
-        _allocate.IsEnabled = deals.Any(d => !d.IsImport && d.Remaining > 0 && d.TradingBuildingClass is not null) && _choices.Length > 0;
         _grid.ItemsSource = deals.Select(deal =>
         {
             var buildings = _scan.Buildings.Where(b => b.ClassName == deal.TradingBuildingClass).ToArray();
@@ -83,12 +85,12 @@ public sealed class TradeDealsWindow : Window
                 buildings.Length == 0 ? "No candidate" : Amount(stock));
         }).ToArray();
         _status.Text = deals.Count == 0 ? "No deals are visible for the selected city. Keep the world map open and choose a city with an active deal." :
-            $"{deals.Count} visible deal(s). Select an export and a matching trading post or dock to prepare its remaining quantity as an existing export target.";
+            $"{deals.Count} visible deal(s). Select one export for a single building, or select several exports on the same route to allocate them together.";
         if (deals.Count > 0) _grid.SelectedIndex = 0;
     }
     private void Allocate_Click(object sender, RoutedEventArgs e)
     {
-        var exports = _visibleDeals.Where(d => !d.IsImport && d.Remaining > 0).ToArray();
+        var exports = _grid.SelectedItems.OfType<Row>().Select(r => r.Deal).ToArray();
         var types = exports.Select(d => d.TradingBuildingClass).Distinct().ToArray();
         if (exports.Length == 0 || types.Length != 1 || types[0] is null) { _status.Text = "Choose a known city with remaining export deals."; return; }
         var buildings = _choices.Where(c => c.Building.Candidate.ClassName == types[0]).Select(c => c.Building).ToArray();

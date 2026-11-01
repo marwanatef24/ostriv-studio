@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using Microsoft.Win32;
 using OstrivStudio.Core;
 
@@ -80,6 +81,26 @@ public partial class BuildingWindow : Window
 
     private void SelectShown_Click(object sender, RoutedEventArgs e) => BuildingGrid.SelectAll();
     private void ClearSelection_Click(object sender, RoutedEventArgs e) => BuildingGrid.UnselectAll();
+    private void Workspace_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int index)) SelectWorkspace(index);
+    }
+    private void SelectWorkspace(int index)
+    {
+        for (int i = 0; i < WorkspacePanels.Children.Count; i++)
+            WorkspacePanels.Children[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var button in WorkspaceNavigation.Children.OfType<Button>())
+            button.Background = button.Tag?.ToString() == index.ToString(CultureInfo.InvariantCulture)
+                ? new SolidColorBrush(Color.FromRgb(40, 66, 94)) : Brushes.Transparent;
+    }
+    private void MarketResource_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string resource }) return;
+        ResourceSearch.Text = resource;
+        SelectWorkspace(0);
+        if (LiveResourceGrid.Items.Count > 0) LiveResourceGrid.SelectedIndex = 0;
+        BottomStatus.Text = $"Showing {resource}. Select a rowhouse shop and an existing record to add stock or save a minimum.";
+    }
     private void FindMarkets_Click(object sender, RoutedEventArgs e)
     {
         BuildingCategory.SelectedIndex = 0;
@@ -114,6 +135,11 @@ public partial class BuildingWindow : Window
         ExportTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => TradingStockLimits.SupportsClass(b.Candidate.ClassName));
         BuildingToolsSummary.Text = selected.Length == 0 ? "Select a building in the browser. Capacity controls support granaries, warehouses and big hay barracks." :
             $"{selected.Length} building(s) selected. " + (CapacityTool.IsEnabled ? "These buildings have a supported observed capacity." : "Capacity editing is unavailable for this selection. Choose supported storage buildings with an observed capacity.");
+        FarmSelectionSummary.Text = selected.Length == 1 && FarmTool.IsEnabled ? $"{selected[0].Name} is ready to inspect." : "Select one grain farm to inspect its fields and plans.";
+        TradeSelectionSummary.Text = ExportTool.IsEnabled ? $"{selected.Length} trading building(s) selected for export targets." : "Select trading posts or docks to manage their existing export targets.";
+        MarketSelectionSummary.Text = selected.Length > 0 && selected.All(b => b.Candidate.ClassName == "building_rowhouse_shop")
+            ? $"{selected.Length} rowhouse shop(s) selected. Choose an existing item below."
+            : "Select rowhouse shops, then choose an existing item below.";
     }
 
     private static string DisplayName(string input) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input.Replace('_', ' ').ToLowerInvariant());
