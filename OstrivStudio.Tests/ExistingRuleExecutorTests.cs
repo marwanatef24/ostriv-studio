@@ -49,6 +49,9 @@ internal static class ExistingRuleExecutorTests
     }
     public static void Run()
     {
+        Check(ExistingRuleExecutor.SupportsExisting("building_trading_dock", 92) && ExistingRuleExecutor.SupportsExisting("building_trading_dock", 46) &&
+            !ExistingRuleExecutor.SupportsExisting("building_trading_dock", 87) && !ExistingRuleExecutor.SupportsInsertion("building_trading_dock", 92),
+            "trading-dock stock support is limited to corroborated existing records");
         var (profile, scan, memory) = Fixture();
         var plan = ExistingRuleExecutor.Prepare(profile, scan);
         Check(plan.Entries.Count == 4 && plan.Entries.Single(e => e.Record.Id == 87).Insert, "batch plans missing barley insertion alongside existing resources");

@@ -11,6 +11,12 @@ public sealed record TradeDeal(int CityId, int ResourceId, uint Flags, int DealI
 {
     public bool IsImport => (Flags & 1) != 0;
     public double Remaining => Math.Max(0, Total - (double)Completed);
+    public string? TradingBuildingClass => CityId switch
+    {
+        1 or 2 or 3 => "building_trading_post",
+        4 or 5 => "building_trading_dock",
+        _ => null
+    };
 }
 
 // Observed in the original editor and checked against one live deal on the

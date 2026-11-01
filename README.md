@@ -36,7 +36,7 @@ If an earlier preview was run inside the Codex desktop app, the first standalone
 
 Select a grain farm and open **Farm rotations…** to review fields, reorder an existing future crop sequence, replace a supported future crop, or change ploughing for selected fields. The current crop and rotation length remain locked. Other farm controls are not implemented.
 
-For deals, open the world map in Ostriv, select a city with an active deal, scan, and choose **Trade deals…**. A selected export deal can prepare its remaining quantity as a minimum for an existing export-stock item on a trading post. **Export targets…** can also increase existing targets across selected posts. These actions do not create a deal or export item, change deal quantities, or move stock directly. Trading-dock writes and direct deal editing are not implemented.
+For deals, open the world map in Ostriv, select a city with an active deal, scan, and choose **Trade deals…**. A selected export deal can prepare its remaining quantity as a minimum for an existing export-stock item on a matching trading post or dock. **Export targets…** can also increase existing targets across selected posts and docks. Existing dock broadcloth and clothes can be increased once or maintained by supported stock rules. These actions do not create a deal or export item, change deal quantities, or move stock directly; other dock stock and direct deal editing are not implemented.
 
 ## Build and test
 

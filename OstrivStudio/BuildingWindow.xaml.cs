@@ -121,11 +121,11 @@ public partial class BuildingWindow : Window
     {
         var selected = BuildingGrid.SelectedItem as BuildingRow;
         string type = selected?.Candidate.ClassName ?? "";
-        bool supported = type is "building_camp_storage" or "building_granary" or "building_warehouse" or "building_well" or "building_stone_mining_camp" or "building_fishery" or "building_trading_post" or "building_ashery" or "building_brickworks";
+        bool supported = type is "building_camp_storage" or "building_granary" or "building_warehouse" or "building_well" or "building_stone_mining_camp" or "building_fishery" or "building_trading_post" or "building_trading_dock" or "building_ashery" or "building_brickworks";
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing export targets can be increased, and selected future farm crops can be changed. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, markets, deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased, and selected future farm crops can be changed. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, markets, deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {
@@ -265,8 +265,8 @@ public partial class BuildingWindow : Window
     private async void TradingLimits_Click(object sender, RoutedEventArgs e)
     {
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
-        if (_snapshot is null || selected.Length == 0 || selected.Any(b => b.Candidate.ClassName != "building_trading_post"))
-        { MessageBox.Show(this, "Find buildings and select one or more trading posts first.", "Export stock targets", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        if (_snapshot is null || selected.Length == 0 || selected.Any(b => !TradingStockLimits.SupportsClass(b.Candidate.ClassName)))
+        { MessageBox.Show(this, "Find buildings and select one or more trading posts or docks first.", "Export stock targets", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var snapshot = _snapshot;
         try
         {
@@ -278,7 +278,7 @@ public partial class BuildingWindow : Window
             {
                 _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
                 ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "An export-target edit was attempted; previous results are invalid.";
-                BottomStatus.Text = "Refresh the trading-post panel in Ostriv and verify the target.";
+                BottomStatus.Text = "Refresh the trading-building panel in Ostriv and verify the target.";
             }) { Owner = this };
             window.ShowDialog();
         }

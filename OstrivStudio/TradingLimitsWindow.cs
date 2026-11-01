@@ -36,13 +36,13 @@ public sealed class TradingLimitsWindow : Window
             .OrderBy(id => names.GetValueOrDefault(id, $"Resource {id}"))
             .Select(id => new ResourceChoice(id, names.GetValueOrDefault(id, $"Resource {id}"))).ToArray();
         _resource.ItemsSource = common;
-        _grid.Columns.Add(new DataGridTextColumn { Header = "Trading post", Binding = new Binding(nameof(Row.Building)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
+        _grid.Columns.Add(new DataGridTextColumn { Header = "Trading building", Binding = new Binding(nameof(Row.Building)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Current target", Binding = new Binding(nameof(Row.Current)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Preview", Binding = new Binding(nameof(Row.Result)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         top.Children.Add(new TextBlock { Text = "Export stock targets", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Increase an existing export-stock target across the selected trading posts. Higher targets are left unchanged; no deal or stock amount is edited.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
+        top.Children.Add(new TextBlock { Text = "Increase an existing export-stock target across selected trading posts and docks. Higher targets are left unchanged; no deal or stock amount is edited.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         controls.Children.Add(_resource); controls.Children.Add(_amount);
         var preview = new Button { Content = "Preview changes" }; preview.Click += (_, _) => Preview(); controls.Children.Add(preview);
@@ -56,7 +56,7 @@ public sealed class TradingLimitsWindow : Window
         if (requiredDeal is not null) _resource.IsEnabled = false;
         if (requiredDeal is not null) _amount.Text = Math.Ceiling(requiredDeal.Remaining).ToString(CultureInfo.CurrentCulture);
         _status.Text = common.Length == 0 || (requiredDeal is not null && _resource.SelectedIndex < 0)
-            ? "The selected post does not already have this export-stock entry; adding new entries is not supported."
+            ? "The selected building does not already have this export-stock entry; adding new entries is not supported."
             : requiredDeal is null ? "Choose a resource and a minimum target, then preview the changes."
             : "The remaining deal quantity is prefilled. Keep the city’s deal list open; it will be checked again before writing.";
     }
@@ -75,7 +75,7 @@ public sealed class TradingLimitsWindow : Window
                 return new Row(_selected[i].Name, current.ToString("N0", CultureInfo.CurrentCulture), (decimal)current >= target ? "Already at or above target" : $"Increase to {target:N0}");
             }).ToArray();
             _reviewed = (resource.Id, target); _apply.IsEnabled = count > 0;
-            _status.Text = count == 0 ? "All selected posts are already at or above this target." : $"{count} post(s) will be increased. Verify each candidate in Ostriv before applying.";
+            _status.Text = count == 0 ? "All selected buildings are already at or above this target." : $"{count} building(s) will be increased. Verify each candidate in Ostriv before applying.";
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or OverflowException) { _status.Text = ex.Message; }
     }
@@ -93,13 +93,13 @@ public sealed class TradingLimitsWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         { MessageBox.Show(this, "Backup failed; no export target was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save, and do the listed candidates match your trading posts? Ostriv will briefly pause while existing export targets below {reviewed.Target:N0} are increased. Avoid changing game speed during the edit.\n\nIf it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
+        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save, and do the listed candidates match your trading buildings? Ostriv will briefly pause while existing export targets below {reviewed.Target:N0} are increased. Avoid changing game speed during the edit.\n\nIf it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
         if (MessageBox.Show(this, question, "Apply export targets?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         _busy = true; _apply.IsEnabled = false; _resource.IsEnabled = false; _amount.IsEnabled = false; _status.Text = "Applying export targets…";
         try
         {
             int count = await Task.Run(() => TradingStockLimits.ApplyToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None, _requiredDeal));
-            MessageBox.Show(this, $"{count} export target(s) passed memory readback. Close and reopen the trading-post panel in Ostriv to refresh it, then save there if correct.\n\nBackup: {backup.Directory}", "Export targets increased", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, $"{count} export target(s) passed memory readback. Close and reopen the trading-building panel in Ostriv to refresh it, then save there if correct.\n\nBackup: {backup.Directory}", "Export targets increased", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         { MessageBox.Show(this, "The export-target action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Export targets stopped", MessageBoxButton.OK, MessageBoxImage.Error); }

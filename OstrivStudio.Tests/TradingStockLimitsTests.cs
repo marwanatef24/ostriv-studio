@@ -16,7 +16,7 @@ internal static class TradingStockLimitsTests
     {
         var posts = new[] {
             new BuildingCandidate("building_trading_post", 0x10000, 0x9000, 0x50000, 1, [new(0, 12, 10, 0, 0, 0)], "sample", null),
-            new BuildingCandidate("building_trading_post", 0x12000, 0x9100, 0x60000, 1, [new(0, 12, 20, 0, 0, 0)], "sample", null)
+            new BuildingCandidate("building_trading_dock", 0x12000, 0x9100, 0x60000, 1, [new(0, 12, 20, 0, 0, 0)], "sample", null)
         };
         var scan = new DiscoveryResult(1, DateTime.UtcNow, "test", FishBulkEditor.SupportedHash, 408, 416, posts, 1, true, 0, "");
         var memory = new Memory();
@@ -42,10 +42,20 @@ internal static class TradingStockLimitsTests
         var (scan, posts, memory) = Fixture();
         var snapshot = TradingStockLimits.Capture(scan, posts, memory);
         Check(snapshot.Posts.Count == 2 && snapshot.Posts[0].Limits.Single(x => x.ResourceId == 12).Target == 5000f,
-            "trading-post export targets are decoded from the reviewed lists");
+            "post and dock export targets are decoded from the reviewed lists");
+        foreach (var deal in new[] {
+            new TradeDeal(2, 12, 0, 1, 7000, 0), // A post route cannot target a mixed post/dock selection.
+            new TradeDeal(99, 12, 0, 1, 7000, 0), // An unknown route cannot select any building.
+            new TradeDeal(4, 12, 1, 1, 7000, 0) // An import is not an export target.
+        })
+        {
+            try { TradingStockLimits.ApplyToGame(snapshot, 12, 7000, CancellationToken.None, deal); throw new Exception("Invalid deal accepted"); }
+            catch (InvalidOperationException e) when (e.Message.Contains("reviewed export deal") && memory.Writes == 0) { }
+        }
+        Console.WriteLine("PASS mismatched, unknown and import deals are rejected before process access");
         Check(TradingStockLimits.ApplyChecked(snapshot, 12, 7000, memory) == 2 && memory.Writes == 2 &&
             BitConverter.ToSingle(memory.Read(0x30018, 4)) == 7000 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 7000,
-            "export targets increase across two reviewed trading posts");
+            "export targets increase across a reviewed post and dock");
         (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
         Check(TradingStockLimits.ApplyChecked(snapshot, 12, 5500, memory) == 1 && memory.Writes == 1 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 6000,
             "export targets already above the minimum are not reduced");

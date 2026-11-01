@@ -36,6 +36,8 @@ internal static class TradeDealReaderTests
         var row = TradeDealReader.Capture(scan, memory).Single();
         Check(row.CityId == 2 && row.ResourceId == 12 && !row.IsImport && row.Total == 190 && row.Completed == 40 && row.Remaining == 150,
             "trade reader decodes a visible export and its remaining quantity without writes");
+        Check(row.TradingBuildingClass == "building_trading_post" && (row with { CityId = 4 }).TradingBuildingClass == "building_trading_dock" &&
+            (row with { CityId = 99 }).TradingBuildingClass is null, "deal routing uses known cities and rejects unknown destinations");
         TradeDealReader.RequireUnchanged(scan, memory, row);
         memory.Put(0x40030, BitConverter.GetBytes(41f));
         try { TradeDealReader.RequireUnchanged(scan, memory, row); throw new Exception("Changed reviewed deal accepted"); }

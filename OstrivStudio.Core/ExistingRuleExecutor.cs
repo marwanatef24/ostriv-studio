@@ -20,6 +20,9 @@ public static class ExistingRuleExecutor
     {
         "building_ashery" => id == 109,
         "building_brickworks" => id == 32,
+        // Only existing broadcloth and clothes records were corroborated in
+        // a live trading dock on the supported executable.
+        "building_trading_dock" => id is 92 or 46,
         var name => Classes.Contains(name)
     };
     private static readonly HashSet<int> CampInsertions = [6, 9, 10, 18, 33, 36, 69, 80, 85, 92, 109, 123, 133];

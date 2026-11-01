@@ -11,11 +11,12 @@ public sealed record TradingStockLimit(int Index, int ResourceId, float Target);
 public sealed record TradingPostLimits(BuildingCandidate Building, ulong Pointer, IReadOnlyList<TradingStockLimit> Limits, string Bytes);
 public sealed record TradingLimitsSnapshot(DiscoveryResult Scan, IReadOnlyList<TradingPostLimits> Posts);
 
-// Only existing trading-post export-stock targets on the independently observed
+// Only existing trading-post and trading-dock export-stock targets on the independently observed
 // executable are supported. This does not add slots or edit trade deals.
 public static class TradingStockLimits
 {
     private const int CountOffset = 0x800, PointerOffset = 0x808, RecordSize = 20;
+    public static bool SupportsClass(string name) => name is "building_trading_post" or "building_trading_dock";
     private static byte[] Read(FishBulkEditor.IMemory memory, ulong address, int size)
     {
         if (address < 0x10000 || address > (ulong)long.MaxValue - (uint)size) throw new InvalidOperationException("An export-stock pointer is invalid.");
@@ -36,21 +37,21 @@ public static class TradingStockLimits
         if (!scan.Complete || scan.UnreadableChunks != 0 || scan.GameSha256 != FishBulkEditor.SupportedHash || scan.CountOffset != 408 || scan.PointerOffset != 416 ||
             selected.Count is < 1 or > 64 || selected.Select(b => b.Address).Distinct().Count() != selected.Count ||
             scan.Buildings.Select(b => b.Address).Distinct().Count() != scan.Buildings.Count)
-            throw new InvalidOperationException("Select distinct trading posts from a complete scan of the tested game build.");
+            throw new InvalidOperationException("Select distinct trading buildings from a complete scan of the tested game build.");
         var posts = new List<TradingPostLimits>(); var ranges = new List<(ulong Start, ulong End)>();
         foreach (var b in selected)
         {
-            if (b.ClassName != "building_trading_post" || !scan.Buildings.Any(x => ReferenceEquals(x, b)) ||
+            if (!SupportsClass(b.ClassName) || !scan.Buildings.Any(x => ReferenceEquals(x, b)) ||
                 b.ResourceCount is < 0 or > 511 || b.ResourceCount != b.Resources.Count)
-                throw new InvalidOperationException("Only reviewed trading-post candidates are supported.");
+                throw new InvalidOperationException("Only reviewed trading-post and trading-dock candidates are supported.");
             byte[] header = Read(memory, b.Address, PointerOffset + 8);
             if (BinaryPrimitives.ReadUInt64LittleEndian(header) != b.Vtable ||
                 BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(scan.CountOffset)) != b.ResourceCount ||
                 BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(scan.PointerOffset)) != b.ResourcePointer)
-                throw new InvalidOperationException("A trading post changed since the scan.");
+                throw new InvalidOperationException("A trading building changed since the scan.");
             int count = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(CountOffset));
             ulong pointer = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(PointerOffset));
-            if (count is < 1 or > 128) throw new InvalidOperationException("A trading post has no supported export-stock list.");
+            if (count is < 1 or > 128) throw new InvalidOperationException("A trading building has no supported export-stock list.");
             byte[] bytes = Read(memory, pointer, checked(count * RecordSize));
             var limits = new List<TradingStockLimit>();
             for (int i = 0; i < count; i++)
@@ -68,7 +69,7 @@ public static class TradingStockLimits
             ulong end = checked(pointer + (ulong)bytes.Length);
             if (ranges.Any(r => Overlaps(pointer, end, r.Start, r.End)) ||
                 scan.UiCandidates.Any(ui => Overlaps(pointer, end, ui.Address, checked(ui.Address + 8))) || scan.Buildings.Any(other =>
-                Overlaps(pointer, end, other.Address, checked(other.Address + (ulong)(other.ClassName == "building_trading_post" ? PointerOffset + 8 : scan.PointerOffset + 8))) ||
+                Overlaps(pointer, end, other.Address, checked(other.Address + (ulong)(SupportsClass(other.ClassName) ? PointerOffset + 8 : scan.PointerOffset + 8))) ||
                 (other.ResourceCount > 0 && other.ResourcePointer != 0 && Overlaps(pointer, end, other.ResourcePointer, checked(other.ResourcePointer + (ulong)other.ResourceCount * RecordSize)))))
                 throw new InvalidOperationException("An export-stock list overlaps another observed object.");
             ranges.Add((pointer, end));
@@ -86,7 +87,7 @@ public static class TradingStockLimits
     {
         ValidateTarget(resourceId, target);
         if (snapshot.Posts.Count == 0 || snapshot.Posts.Any(p => p.Limits.Count(x => x.ResourceId == resourceId) != 1))
-            throw new InvalidOperationException("Every selected post must already have this export-stock entry.");
+            throw new InvalidOperationException("Every selected trading building must already have this export-stock entry.");
         return snapshot.Posts.Count(p => (decimal)p.Limits.Single(x => x.ResourceId == resourceId).Target < target);
     }
     private static bool Same(TradingLimitsSnapshot a, TradingLimitsSnapshot b) => a.Posts.Count == b.Posts.Count &&
@@ -166,8 +167,9 @@ public static class TradingStockLimits
     public static int ApplyToGame(TradingLimitsSnapshot reviewed, int resourceId, decimal target, CancellationToken cancellation, TradeDeal? requiredDeal = null)
     {
         _ = CountChanges(reviewed, resourceId, target);
-        if (requiredDeal is not null && (requiredDeal.IsImport || requiredDeal.ResourceId != resourceId))
-            throw new InvalidOperationException("Choose the resource from the reviewed export deal.");
+        if (requiredDeal is not null && (requiredDeal.IsImport || requiredDeal.ResourceId != resourceId ||
+            requiredDeal.TradingBuildingClass is null || reviewed.Posts.Any(p => p.Building.ClassName != requiredDeal.TradingBuildingClass)))
+            throw new InvalidOperationException("Choose the resource and trading building for the reviewed export deal.");
         cancellation.ThrowIfCancellationRequested();
         using var process = CheckedProcess(reviewed.Scan);
         ulong moduleBase = checked((ulong)process.MainModule!.BaseAddress.ToInt64());
