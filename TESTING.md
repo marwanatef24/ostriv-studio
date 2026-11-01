@@ -4,6 +4,7 @@ The test suite exercises simulated memory, profile persistence, bulk planning, c
 
 On the executable identified in [COMPATIBILITY.md](COMPATIBILITY.md), supervised tests in a disposable settlement observed:
 
+- A generated wheat, buckwheat and potato draft was applied to one six-season field. The guarded writer and an independent fresh scan read back the generated order, and Ostriv displayed the matching crop icons. The other two fields were unchanged. The test did not save and reopen that change; pre-test autosaves were restored and compared with Steam's cache after the session. Generated preset saving and reopening were separately exercised in an isolated planner.
 - One brick added to an existing brickworks record and shown in Ostriv.
 - A big hay barrack capacity rule increased 7,000 to 7,001; a second cycle made no additional change. The game reset that capacity on reload, and a newly started monitor reapplied it.
 - Ploughing changed for two grain-farm fields together and remained changed after the test save was reopened.

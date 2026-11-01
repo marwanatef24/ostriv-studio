@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — crop plan generator preview
+
+- Generate a field-length crop rotation from selected crops and an optional ploughing assumption, then review it as a draft and optionally save it as a preset.
+- Current crop and length remain unchanged. Wheat, buckwheat and potato can be introduced; other modeled crops are offered only when already in the field and remain subject to existing write guards.
+- The planning model assumes full fertility and uses values from the original editor. It does not read actual fertility or guarantee yields. One generated plan was applied and checked on a backed-up test field on the supported game build; it was not saved and reopened in the game.
+
 ## 0.2.1 — task workspace preview
 
 - Added workspace navigation and separate capacity, farm, trade and market layouts, including shortcuts to supported shop goods.

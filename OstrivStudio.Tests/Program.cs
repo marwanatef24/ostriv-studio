@@ -27,6 +27,7 @@ await CapacityRulePlannerTests.Run();
 TradingStockLimitsTests.Run();
 TradeAllocationPlannerTests.Run();
 FarmCropEditorTests.Run();
+CropPlanGeneratorTests.Run();
 TradeDealReaderTests.Run();
 LiveRuleTests.Run();
 ResourceInsightsTests.Run();
