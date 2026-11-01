@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4 — task home and shop rules
+
+- Added a task-based home screen for resources, farms, trading, markets, capacity and saved rules.
+- Added a guided setup that creates missing rules for supported rowhouse shop goods without replacing existing rules. Start the saved-rule monitor to apply them.
+- Trade deals refresh automatically as the selected city changes, clearing stale selections before allowing further actions. This was checked against a temporary live deal on the supported build.
+- Corrected an earlier labeling error: resource 93 is warm clothes, not salt. Salt remains unsupported.
+- Direct deal editing, missing shop records and many building features are still unavailable. See [feature coverage](FEATURE-COVERAGE.md).
+
 ## 0.2.3 — simpler controls and fertility preview
 
 - Simplified the main building, resource and action flow, hid advanced building filters until needed, and made market shortcuts find rowhouse shops and select the exact existing item.
@@ -25,7 +33,7 @@
 - Rebuilt saved rules around profile settings, search and bulk actions. Updated operational windows and the resource ledger to a consistent light theme.
 - Added 25 built-in crop rotation suggestions and named local presets. Suggestions align with the current crop and must pass existing field-length and crop safety checks. Custom presets persist separately from automation profiles and reject stale concurrent saves.
 - Added export allocation from visible deals: combine repeated resources, split remaining quantities across selected route-compatible buildings, or assign resources in turn. Preview every target, preserve higher targets and block missing entries.
-- Added one-time additions and saved minimums for existing clothes, shoes and salt in rowhouse shops, limited to the observed 100-unit target. Other retail goods and missing records remain unsupported.
+- Added one-time additions and saved minimums for existing clothes, shoes and warm clothes in rowhouse shops, limited to the observed 100-unit target. Earlier notes incorrectly identified warm clothes as salt. Other retail goods and missing records remain unsupported.
 - Corrected capacity guidance: supported saved minimums reapply while the monitor runs.
 
 ## 0.1.4 — experimental preview

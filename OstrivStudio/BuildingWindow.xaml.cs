@@ -81,6 +81,19 @@ public partial class BuildingWindow : Window
 
     private void SelectShown_Click(object sender, RoutedEventArgs e) => BuildingGrid.SelectAll();
     private void ClearSelection_Click(object sender, RoutedEventArgs e) => BuildingGrid.UnselectAll();
+    private void Home_Click(object sender, RoutedEventArgs e) { WorkspaceHost.Visibility = Visibility.Collapsed; HomePanel.Visibility = Visibility.Visible; }
+    private void HomeTask_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || !int.TryParse(button.Tag?.ToString(), out int index)) return;
+        if (index == 5) { Profiles_Click(sender, e); return; }
+        BuildingCategory.SelectedIndex = 0;
+        FilterBuildingsByResource.IsChecked = false;
+        ResourceSearch.Text = "";
+        BuildingSearch.Text = index switch { 2 => "grain farm", 3 => "trading", 4 => "rowhouse shop", _ => "" };
+        WorkspaceHost.Visibility = Visibility.Visible; HomePanel.Visibility = Visibility.Collapsed;
+        SelectWorkspace(index);
+        if (BuildingGrid.SelectedItems.Count == 0 && BuildingGrid.Items.Count > 0) BuildingGrid.SelectedIndex = 0;
+    }
     private void Workspace_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int index)) SelectWorkspace(index);
@@ -120,6 +133,31 @@ public partial class BuildingWindow : Window
         BuildingSearch.Text = "rowhouse shop";
         ResourceSearch.Text = "";
         FilterBuildingsByResource.IsChecked = false;
+    }
+    private void SetupMarketRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_settingsAvailable) { MessageBox.Show(this, "Profile settings could not be loaded.", "Shop rules", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        try
+        {
+            byte[] before = File.Exists(_settingsPath) ? SHA256.HashData(File.ReadAllBytes(_settingsPath)) : [];
+            var fresh = ProfileStore.Load(_settingsPath);
+            if (!string.Equals(fresh.SelectedProfile, _state.SelectedProfile, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("The selected profile changed in another window. Reopen profiles and try again.");
+            var rules = fresh.AutomationProfiles[fresh.SelectedProfile].MaintenanceRules;
+            int[] missing = MarketRulePlanner.MissingShopRules(rules);
+            if (missing.Length == 0) { MessageBox.Show(this, "All three shop rules already exist. Open Saved rules to review them; nothing was changed.", "Shop rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+            string names = string.Join(", ", missing.Select(id => _resourceNames.GetValueOrDefault(id, $"Resource {id}")));
+            var dialog = new KeepStockedWindow(names, "rowhouse shop", fresh.SelectedProfile, null, 100, multiple: true) { Owner = this };
+            if (dialog.ShowDialog() != true) return;
+            byte[] after = File.Exists(_settingsPath) ? SHA256.HashData(File.ReadAllBytes(_settingsPath)) : [];
+            if (!before.AsSpan().SequenceEqual(after)) throw new InvalidOperationException("The profile changed while editing. No rules were saved; try again.");
+            foreach (int id in missing) rules.Add(new MaintenanceRule { ResourceId = id, BuildingType = "building_rowhouse_shop", Target = dialog.Target, Enabled = true, Mode = MaintenanceMode.Each, BuildingLimit = -1 });
+            ProfileStore.Save(_settingsPath, fresh); _state = fresh;
+            BottomStatus.Text = $"Saved {missing.Length} new shop rule(s) in {fresh.SelectedProfile}. Existing rules were kept.";
+            MessageBox.Show(this, $"Saved rules for {names}. Existing rules were not changed. Start saved rules to apply supported existing records while you play.", "Shop rules saved", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException or OverflowException or JsonException)
+        { MessageBox.Show(this, ex.Message, "Shop rules not saved", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
     private void ResourceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateActions();
     private void ActionIntent_Changed(object sender, RoutedEventArgs e) => UpdateActions();
@@ -211,7 +249,7 @@ public partial class BuildingWindow : Window
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and salt (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and warm clothes (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {

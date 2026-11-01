@@ -8,7 +8,7 @@ Ostriv Studio is an independent, experimental Windows companion for inspecting a
 
 1. Download the latest `OstrivStudio.Editor-win-Setup.exe` from [GitHub releases](https://github.com/marwanatef24/ostriv-studio/releases).
 2. Run the installer and launch **Ostriv Studio** from the Start menu. Windows may identify an unsigned preview installer as unrecognized.
-3. Start Ostriv and load the settlement you want to use. In the editor select **Choose game** if it is not found automatically, then **Find**.
+3. Start Ostriv and load the settlement you want to use. Choose a task on the home screen. Select **Choose game** if Ostriv is not found automatically, then **Find** to see buildings.
 
 The installer includes the Windows x64 runtime. Installed copies check for updates on launch; **More → Check for updates** checks manually. When an update is available, review its changelog and choose whether to install it. Applying an update restarts the editor. Profiles are stored outside the installation folder.
 
@@ -36,11 +36,11 @@ If an earlier preview was run inside the Codex desktop app, the first standalone
 
 Select a grain farm and open the Farms tab, then **Open farm planner…** to review fields, reorder an existing future crop sequence, replace a supported future crop, change ploughing, or restore all three nutrients to 100% for selected fields. Compare field numbers and nutrient values with the game before confirming. Choose from 25 built-in crop rotation suggestions or save and load your own named presets. Suggestions rotate around the current crop and must match the field length; unsupported crop introductions are blocked. Custom plans are stored in crop-presets.json beside your profiles, with protection against stale saves from another window. The current crop and rotation length remain locked. Automatic fertility rules and other farm controls are not implemented.
 
-For deals, open the world map in Ostriv, select a city with an active deal, scan, and open the Trading tab, then **View active deals…**. A selected export deal can prepare its remaining quantity as a minimum for an existing export-stock item on a matching trading post or dock. **Allocate exports across buildings…** combines remaining exports by resource and splits the required quantities across selected route-compatible buildings, or assigns each resource to a building in turn. Higher targets stay unchanged; every allocated resource must already have an export entry. The Trading tab also opens bulk export-target controls. Existing dock broadcloth and clothes can be increased once or maintained by supported stock rules. These actions do not create a deal or export item, change deal quantities, or move stock directly; other dock stock and direct deal editing are not implemented.
+For deals, open the world map in Ostriv, select a city with an active deal, scan, and open Trading, then **View deals…**. The list refreshes while open as you select cities. A selected export deal can prepare its remaining quantity as a minimum for an existing export-stock item on a matching trading post or dock. **Allocate selected exports…** combines remaining exports by resource and splits the required quantities across selected route-compatible buildings, or assigns each resource to a building in turn. Higher targets stay unchanged; every allocated resource must already have an export entry. The Trading workspace also opens bulk export-target controls. Existing dock broadcloth and clothes can be increased once or maintained by supported stock rules. These actions do not create a deal or export item, change deal quantities, or move stock directly; other dock stock and direct deal editing are not implemented.
 
 ## Markets
 
-Find rowhouse shops in the building browser, open Resources and choose Clothes, Shoes or Salt. Add once or save a minimum up to the normal 100-unit retail target. These controls support existing records only. Other retail goods, market stalls and missing retail records are blocked.
+Choose Markets to find rowhouse shops, then select Clothes, Shoes or Warm Clothes. Add once or save a minimum up to the normal 100-unit retail target. **Set up shop rules…** can create missing rules for all three goods without replacing existing rules; start the saved-rule monitor to apply them. These controls support existing records only. Salt, other retail goods, market stalls and missing retail records are blocked.
 
 ## Build and test
 

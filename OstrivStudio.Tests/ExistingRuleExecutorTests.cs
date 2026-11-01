@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text.Json;
 using OstrivStudio.Core;
 
 internal static class ExistingRuleExecutorTests
@@ -49,9 +50,18 @@ internal static class ExistingRuleExecutorTests
     }
     public static void Run()
     {
+        var catalog = JsonSerializer.Deserialize<List<ResourceDefinition>>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "resources.json")), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        Check(catalog.Single(r => r.Id == 26).Name == "SALT" && catalog.Single(r => r.Id == 46).Name == "CLOTHES" &&
+            catalog.Single(r => r.Id == 47).Name == "SHOES" && catalog.Single(r => r.Id == 93).Name == "WARM_CLOTHES",
+            "retail resource IDs match the shipped resource catalog");
+        var existingShopRules = new[] { new MaintenanceRule { BuildingType = " BUILDING_ROWHOUSE_SHOP ", ResourceId = 46, Target = 37, Enabled = false },
+            new MaintenanceRule { BuildingType = "building_warehouse", ResourceId = 47, Target = 500, Enabled = true } };
+        Check(MarketRulePlanner.MissingShopRules(existingShopRules).SequenceEqual([47, 93]) &&
+            existingShopRules[0].Target == 37 && !existingShopRules[0].Enabled && existingShopRules[1].Target == 500,
+            "shop rule setup leaves existing settings intact and adds only missing shop goods");
         Check(new[] {46,47,93}.All(id => ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", id)) &&
-            !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 7) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
-            "retail edits allow only existing clothes, shoes and salt records");
+            !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 26) && !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 7) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
+            "retail edits allow existing clothes, shoes and warm clothes; salt is blocked");
         Check(ExistingRuleExecutor.SupportsExisting("building_trading_dock", 92) && ExistingRuleExecutor.SupportsExisting("building_trading_dock", 46) &&
             !ExistingRuleExecutor.SupportsExisting("building_trading_dock", 87) && !ExistingRuleExecutor.SupportsInsertion("building_trading_dock", 92),
             "trading-dock stock support is limited to corroborated existing records");

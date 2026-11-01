@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
   <ItemGroup><ProjectReference Include="..\OstrivStudio.Core\OstrivStudio.Core.csproj" /></ItemGroup>
+  <ItemGroup><Content Include="..\OstrivStudio\resources.json" Link="resources.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
   <!-- Local live-game research helpers are intentionally excluded from the distributable test suite. -->
   <ItemGroup><Compile Remove="Experimental*.cs" /></ItemGroup>
 </Project>
