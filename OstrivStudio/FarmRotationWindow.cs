@@ -62,6 +62,7 @@ public sealed class FarmRotationWindow : Window
         var presetControls = new WrapPanel { Margin = new Thickness(0, 14, 0, 0) };
         presetControls.Children.Add(_presets);
         var loadPreset = new Button { Content = "Load preset" }; loadPreset.Click += (_, _) => LoadPreset(); presetControls.Children.Add(loadPreset);
+        var generate = new Button { Content = "Generate plan…" }; generate.Click += (_, _) => GeneratePlan(); presetControls.Children.Add(generate);
         var savePreset = new Button { Content = "Save this plan…" }; savePreset.Click += (_, _) => SavePreset(); presetControls.Children.Add(savePreset);
         var deletePreset = new Button { Content = "Delete preset" }; deletePreset.Click += (_, _) => DeletePreset(); presetControls.Children.Add(deletePreset);
         top.Children.Add(presetControls);
@@ -87,6 +88,15 @@ public sealed class FarmRotationWindow : Window
             .Concat(CropPresetCatalog.Defaults.Select(p => new PresetChoice("Built-in · " + p.Name, BuiltIn: p))).ToArray();
         _presets.SelectedItem = _presets.Items.Cast<PresetChoice>().FirstOrDefault(p => p.Name == name);
         if (_presets.SelectedItem is null && _presets.Items.Count > 0) _presets.SelectedIndex = 0;
+    }
+    private void GeneratePlan()
+    {
+        if (_busy || Selected is not FarmFieldSnapshot field) return;
+        var dialog = new CropPlanDialog(field) { Owner = this };
+        if (dialog.ShowDialog() != true || dialog.Plan is not int[] plan) return;
+        _ = FarmCropEditor.Changed(field, plan);
+        _drafts[field.Number] = plan.ToList(); RefreshDraft();
+        _status.Text += " Generated plan loaded into the draft; review before applying.";
     }
     private void LoadPreset()
     {
