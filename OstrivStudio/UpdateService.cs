@@ -53,11 +53,11 @@ public static class UpdateService
         {
             _manager = manager; _update = update;
             Title = "Ostriv Studio update"; Width = 640; Height = 520; MinWidth = 520; MinHeight = 400;
-            WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#122431")); Foreground = Brushes.White;
+            WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9")); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
             var root = new DockPanel { Margin = new Thickness(26) };
             var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
             top.Children.Add(new TextBlock { Text = $"Version {update.TargetFullRelease.Version} is available", FontSize = 24, FontWeight = FontWeights.SemiBold });
-            top.Children.Add(new TextBlock { Text = "Review what changed. Installing restarts Ostriv Studio; your profiles are stored separately.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 7, 0, 10), Foreground = Brushes.LightGray });
+            top.Children.Add(new TextBlock { Text = "Review what changed. Installing restarts Ostriv Studio; your profiles are stored separately.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 7, 0, 10), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
             var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
             footer.Children.Add(new Button { Content = "Later", IsCancel = true }); footer.Children.Add(_install); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
             DockPanel.SetDock(_status, Dock.Bottom); root.Children.Add(_status);

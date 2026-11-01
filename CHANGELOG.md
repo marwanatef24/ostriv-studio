@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 — redesigned experimental preview
+
+- Rebuilt the main workflow: searchable building browser, dedicated inspector, and Resources, Building, Farms, Trading and Markets tabs.
+- Made Add once and Keep a minimum explicit choices with contextual previews. Added Select shown and Clear selection for bulk work.
+- Rebuilt saved rules around profile settings, search and bulk actions. Updated operational windows and the resource ledger to a consistent light theme.
+- Added 25 built-in crop rotation suggestions and named local presets. Suggestions align with the current crop and must pass existing field-length and crop safety checks. Custom presets persist separately from automation profiles and reject stale concurrent saves.
+- Added export allocation from visible deals: combine repeated resources, split remaining quantities across selected route-compatible buildings, or assign resources in turn. Preview every target, preserve higher targets and block missing entries.
+- Added one-time additions and saved minimums for existing clothes, shoes and salt in rowhouse shops, limited to the observed 100-unit target. Other retail goods and missing records remain unsupported.
+- Corrected capacity guidance: supported saved minimums reapply while the monitor runs.
+
 ## 0.1.4 — experimental preview
 
 - Apply a field's future crop plan across compatible fields with different current crops and rotations; each current crop remains unchanged.

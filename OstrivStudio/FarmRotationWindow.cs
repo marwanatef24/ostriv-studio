@@ -10,6 +10,8 @@ namespace OstrivStudio;
 public sealed class FarmRotationWindow : Window
 {
     private sealed record CropRow(int Id, string Label) { public override string ToString() => Label; }
+    private sealed record PresetChoice(string Name, CropPreset? Saved = null, CropRotationTemplate? BuiltIn = null)
+    { public override string ToString() => Name; }
     private readonly FarmRotationSnapshot _farm;
     private readonly Action _invalidate;
     private readonly Dictionary<int, List<int>> _drafts;
@@ -20,6 +22,9 @@ public sealed class FarmRotationWindow : Window
     private readonly Button _apply = new() { Content = "Apply to this field…", IsEnabled = false };
     private readonly Button _applyMatching = new() { Content = "Apply future crops to compatible fields…", IsEnabled = false };
     private bool _busy;
+    private readonly string _presetPath = Path.Combine(Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio"), "crop-presets.json");
+    private readonly ComboBox _presets = new() { MinWidth = 220, Margin = new Thickness(0, 0, 8, 0) };
+    private CropPresetStore.Snapshot? _savedPresets;
     private static string CropName(int id) => id switch
     {
         6 => "Wheat", 7 => "Buckwheat", 8 => "Potato", 9 => "Hemp", 10 => "Sunflower", 13 => "Fallow",
@@ -31,8 +36,8 @@ public sealed class FarmRotationWindow : Window
         _drafts = farm.Fields.ToDictionary(f => f.Number, f => f.Crops.ToList());
         Title = "Farm rotations"; Width = 980; Height = 700; MinWidth = 760; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(20, 40, 51)); Foreground = new SolidColorBrush(Color.FromRgb(240, 238, 230));
-        _crops.Background = new SolidColorBrush(Color.FromRgb(28, 49, 59));
+        Background = new SolidColorBrush(Color.FromRgb(242, 245, 249)); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
+        _crops.Background = new SolidColorBrush(Color.FromRgb(255, 255, 255));
         _crops.Foreground = Foreground;
         _crops.BorderBrush = new SolidColorBrush(Color.FromRgb(67, 91, 97));
         _crops.FontSize = 14;
@@ -42,8 +47,8 @@ public sealed class FarmRotationWindow : Window
         _crops.ItemContainerStyle = cropItemStyle;
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
-        top.Children.Add(new TextBlock { Text = "Farm rotations", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Choose a field, then arrange its future crops. Apply the plan to this field or to all compatible fields; every field keeps its current crop.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
+        top.Children.Add(new TextBlock { Text = "Farm rotations", FontWeight = FontWeights.SemiBold, FontSize = 28 });
+        top.Children.Add(new TextBlock { Text = "Choose a field, then arrange its future crops. Apply the plan to this field or to all compatible fields; every field keeps its current crop.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
         _fields.ItemsSource = farm.Fields.Select(f => $"Field {f.Number}").ToArray();
         _fields.SelectionChanged += (_, _) => RefreshDraft(); top.Children.Add(_fields); top.Children.Add(_status);
         _replacement.ItemsSource = new[] { new CropRow(6, "Wheat"), new CropRow(7, "Buckwheat"), new CropRow(8, "Potato"), new CropRow(13, "Fallow") };
@@ -54,6 +59,12 @@ public sealed class FarmRotationWindow : Window
         replaceControls.Children.Add(replace);
         var plough = new Button { Content = "Field ploughing…" }; plough.Click += Plough_Click; replaceControls.Children.Add(plough);
         top.Children.Add(replaceControls);
+        var presetControls = new WrapPanel { Margin = new Thickness(0, 14, 0, 0) };
+        presetControls.Children.Add(_presets);
+        var loadPreset = new Button { Content = "Load preset" }; loadPreset.Click += (_, _) => LoadPreset(); presetControls.Children.Add(loadPreset);
+        var savePreset = new Button { Content = "Save this plan…" }; savePreset.Click += (_, _) => SavePreset(); presetControls.Children.Add(savePreset);
+        var deletePreset = new Button { Content = "Delete preset" }; deletePreset.Click += (_, _) => DeletePreset(); presetControls.Children.Add(deletePreset);
+        top.Children.Add(presetControls);
         var bottom = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
         var earlier = new Button { Content = "Move earlier" }; earlier.Click += (_, _) => Move(-1);
         var later = new Button { Content = "Move later" }; later.Click += (_, _) => Move(1);
@@ -63,6 +74,59 @@ public sealed class FarmRotationWindow : Window
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom); root.Children.Add(_crops); Content = root;
         Closing += (_, e) => { if (_busy) e.Cancel = true; };
         _fields.SelectedIndex = 0;
+        try { _savedPresets = CropPresetStore.Load(_presetPath); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        { _status.Text = "Saved crop presets could not be loaded: " + ex.Message; }
+        RefreshPresets();
+        savePreset.IsEnabled = _savedPresets is not null;
+        deletePreset.IsEnabled = _savedPresets is not null;
+    }
+    private void RefreshPresets(string? name = null)
+    {
+        _presets.ItemsSource = (_savedPresets?.Presets.OrderBy(p => p.Name).Select(p => new PresetChoice(p.Name, p)) ?? [])
+            .Concat(CropPresetCatalog.Defaults.Select(p => new PresetChoice("Built-in · " + p.Name, BuiltIn: p))).ToArray();
+        _presets.SelectedItem = _presets.Items.Cast<PresetChoice>().FirstOrDefault(p => p.Name == name);
+        if (_presets.SelectedItem is null && _presets.Items.Count > 0) _presets.SelectedIndex = 0;
+    }
+    private void LoadPreset()
+    {
+        if (_busy || Selected is not FarmFieldSnapshot field || _presets.SelectedItem is not PresetChoice preset) return;
+        try
+        {
+            int[] future = preset.Saved?.FutureCrops ?? preset.BuiltIn!.FutureFor(field.Crops[0]);
+            int[] desired = [field.Crops[0], .. future];
+            _ = FarmCropEditor.Changed(field, desired);
+            _drafts[field.Number] = desired.ToList(); RefreshDraft();
+            _status.Text += " Preset loaded into the draft; review before applying.";
+        }
+        catch (InvalidOperationException ex) { _status.Text = "This preset is incompatible with the selected field. " + ex.Message; }
+    }
+    private void SavePreset()
+    {
+        if (_busy || _savedPresets is null || Selected is not FarmFieldSnapshot field) return;
+        var dialog = new NameDialog("Save crop preset", "Name this future-crop plan", "Save preset") { Owner = this };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            var preset = new CropPreset(dialog.ProfileName.Trim(), _drafts[field.Number].Skip(1).ToArray());
+            _savedPresets = CropPresetStore.Save(_presetPath, _savedPresets, [.. _savedPresets.Presets, preset]);
+            RefreshPresets(preset.Name); _status.Text = "Crop preset saved. It will be available when you reopen the planner.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
+        { _status.Text = "Preset not saved: " + ex.Message; }
+    }
+    private void DeletePreset()
+    {
+        if (_busy || _savedPresets is null || _presets.SelectedItem is not PresetChoice choice) return;
+        if (choice.Saved is not CropPreset preset) { _status.Text = "Built-in suggestions stay available. Only your saved presets can be deleted."; return; }
+        if (MessageBox.Show(this, $"Delete the saved preset '{preset.Name}'? Field drafts and game crops will not change.", "Delete crop preset", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        try
+        {
+            _savedPresets = CropPresetStore.Save(_presetPath, _savedPresets, _savedPresets.Presets.Where(p => p.Name != preset.Name).ToArray());
+            RefreshPresets(); _status.Text = "Crop preset deleted.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.Text.Json.JsonException)
+        { _status.Text = "Preset not deleted: " + ex.Message; }
     }
     private FarmFieldSnapshot? Selected => _fields.SelectedIndex < 0 ? null : _farm.Fields[_fields.SelectedIndex];
     private void RefreshDraft(int selected = 0)

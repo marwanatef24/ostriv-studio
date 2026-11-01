@@ -57,6 +57,20 @@ internal static class TradingStockLimitsTests
             BitConverter.ToSingle(memory.Read(0x30018, 4)) == 7000 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 7000,
             "export targets increase across a reviewed post and dock");
         (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
+        ExportAllocation[] allocation = [new(posts[0].Address, 12, 7001), new(posts[1].Address, 12, 7002)];
+        Check(TradingStockLimits.ApplyAllocationsChecked(snapshot, allocation, memory) == 2 &&
+            BitConverter.ToSingle(memory.Read(0x30018, 4)) == 7001 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 7002,
+            "export allocation writes different reviewed targets and verifies both");
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
+        try { TradingStockLimits.ApplyAllocationsChecked(snapshot, [allocation[0], new(posts[1].Address, 87, 100)], memory); throw new Exception("Missing allocated entry accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS missing allocated export entry blocks every write"); }
+        memory.Put(0x40018, BitConverter.GetBytes(6001f));
+        try { TradingStockLimits.ApplyAllocationsChecked(snapshot, allocation, memory); throw new Exception("Stale allocation accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS stale export allocation prevents every write"); }
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory); memory.FailOnWrite = 2;
+        try { TradingStockLimits.ApplyAllocationsChecked(snapshot, allocation, memory); throw new Exception("Partial allocation ignored"); }
+        catch (PartialGameWriteException) { Console.WriteLine("PASS uncertain export allocation requires backup recovery"); }
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
         Check(TradingStockLimits.ApplyChecked(snapshot, 12, 5500, memory) == 1 && memory.Writes == 1 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 6000,
             "export targets already above the minimum are not reduced");
         (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);

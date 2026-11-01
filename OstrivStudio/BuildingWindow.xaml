@@ -1,50 +1,292 @@
-<Window x:Class="OstrivStudio.BuildingWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Ostriv Studio" Width="1540" Height="920" MinWidth="1150" MinHeight="700" WindowStartupLocation="CenterScreen" Background="#111C32" Foreground="#EDF3EF" FontFamily="Segoe UI">
+<Window x:Class="OstrivStudio.BuildingWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Ostriv Studio · Settlement workspace" Width="1500" Height="930" MinWidth="1120" MinHeight="740" WindowStartupLocation="CenterScreen" Background="#F2F5F9" Foreground="#17253A" FontFamily="Segoe UI">
   <Window.Resources>
     <Style x:Key="WorkButton" TargetType="Button">
-      <Setter Property="Foreground" Value="#ECF3EF"/><Setter Property="Background" Value="#3A5072"/><Setter Property="BorderBrush" Value="#436169"/><Setter Property="BorderThickness" Value="1"/><Setter Property="Padding" Value="14,10"/><Setter Property="Cursor" Value="Hand"/>
-      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Opacity" Value="0.82"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="#F4C77E"/><Setter TargetName="Frame" Property="BorderThickness" Value="2"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Frame" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+      <Setter Property="Foreground" Value="#ECF3EF" />
+      <Setter Property="Background" Value="#3A5072" />
+      <Setter Property="BorderBrush" Value="#436169" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Frame" Property="Opacity" Value="0.82" />
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Frame" Property="BorderBrush" Value="#F4C77E" />
+                <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Frame" Property="Opacity" Value="0.4" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
-    <Style x:Key="PanelGrid" TargetType="DataGrid"><Setter Property="Background" Value="#1D2F4D"/><Setter Property="Foreground" Value="#EDF3EF"/><Setter Property="RowBackground" Value="#1D2F4D"/><Setter Property="AlternatingRowBackground" Value="#263A59"/><Setter Property="GridLinesVisibility" Value="None"/><Setter Property="HeadersVisibility" Value="Column"/><Setter Property="BorderThickness" Value="0"/><Setter Property="RowHeight" Value="47"/><Setter Property="ColumnHeaderHeight" Value="38"/><Setter Property="CanUserAddRows" Value="False"/><Setter Property="CanUserDeleteRows" Value="False"/><Setter Property="IsReadOnly" Value="True"/></Style>
-    <Style x:Key="PanelHeader" TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#30496A"/><Setter Property="Foreground" Value="#BED0CB"/><Setter Property="Padding" Value="12,0"/><Setter Property="BorderThickness" Value="0"/></Style>
-    <Style x:Key="PanelCell" TargetType="DataGridCell"><Setter Property="Padding" Value="12,5"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#5A6281"/><Setter Property="Foreground" Value="#FFFFFF"/></Trigger></Style.Triggers></Style>
+    <Style x:Key="PanelGrid" TargetType="DataGrid">
+      <Setter Property="Background" Value="#1D2F4D" />
+      <Setter Property="Foreground" Value="#EDF3EF" />
+      <Setter Property="RowBackground" Value="#1D2F4D" />
+      <Setter Property="AlternatingRowBackground" Value="#263A59" />
+      <Setter Property="GridLinesVisibility" Value="None" />
+      <Setter Property="HeadersVisibility" Value="Column" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="RowHeight" Value="47" />
+      <Setter Property="ColumnHeaderHeight" Value="38" />
+      <Setter Property="CanUserAddRows" Value="False" />
+      <Setter Property="CanUserDeleteRows" Value="False" />
+      <Setter Property="IsReadOnly" Value="True" />
+    </Style>
+    <Style x:Key="PanelHeader" TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#30496A" />
+      <Setter Property="Foreground" Value="#BED0CB" />
+      <Setter Property="Padding" Value="12,0" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style x:Key="PanelCell" TargetType="DataGridCell">
+      <Setter Property="Padding" Value="12,5" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Style.Triggers>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Background" Value="#5A6281" />
+          <Setter Property="Foreground" Value="#FFFFFF" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
   </Window.Resources>
-  <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="205"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <Border Background="#192844" BorderBrush="#425675" BorderThickness="0,0,1,0"><Grid Margin="22,29,18,25"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <StackPanel>
-        <Border Width="46" Height="46" Background="#E6B874" CornerRadius="11" HorizontalAlignment="Left"><TextBlock Text="O" FontSize="26" FontWeight="Bold" Foreground="#172D31" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-        <TextBlock Text="Ostriv Studio" FontSize="22" FontWeight="SemiBold" Margin="0,14,0,2"/><TextBlock Text="Your settlement, in focus" Foreground="#A3BBB5" FontSize="12" Margin="0,0,0,33"/>
-        <Border Background="#C99C55" CornerRadius="6" Padding="12,12" Margin="-4,0,0,6"><TextBlock Text="Buildings" FontWeight="SemiBold" Foreground="#17243A"/></Border>
-        <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Margin="-4,0,0,5"/>
-        <Button Content="Resource overview" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Margin="-4,0,0,5"/>
-        <Button Content="Run saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Margin="-4,0,0,5"/>
-      </StackPanel>
-      <StackPanel Grid.Row="2"><Button Content="Check for updates" Click="CheckUpdates_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Margin="-4,0,0,12"/><Border Height="1" Background="#42605E" Margin="0,0,0,16"/><TextBlock Text="Your rules are saved here" Foreground="#E8C58D" FontWeight="SemiBold"/><TextBlock Text="Open the rule monitor to keep supported quantities stocked while you play." TextWrapping="Wrap" Foreground="#A9C0BA" FontSize="11" LineHeight="17" Margin="0,7,0,0"/></StackPanel>
-    </Grid></Border>
-    <Grid Grid.Column="1" Margin="28,26,28,20"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-        <StackPanel><TextBlock Text="Settlement workspace" FontSize="33" FontWeight="SemiBold"/><TextBlock Text="Choose a building, review its stock and decide how to manage it." Foreground="#B2C8C1" FontSize="13" Margin="0,4,0,0"/></StackPanel>
-        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"><Button x:Name="ChooseButton" Content="Choose game" Style="{StaticResource WorkButton}" Click="ChooseGame_Click" Margin="0,0,9,0"/><Button x:Name="ScanButton" Content="Find buildings" Style="{StaticResource WorkButton}" Background="#F0C16D" BorderBrush="#F0C16D" Foreground="#142B30" FontWeight="SemiBold" Click="Scan_Click"/><Button x:Name="CancelButton" Content="Cancel scan" Style="{StaticResource WorkButton}" Margin="9,0,0,0" Click="Cancel_Click" Visibility="Collapsed"/></StackPanel>
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="76" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <Border Background="White" BorderBrush="#D8E0EB" BorderThickness="0,0,0,1">
+      <Grid Margin="24,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Border Background="#246BFD" CornerRadius="10" Width="38" Height="38">
+            <TextBlock Text="O" FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <StackPanel Margin="12,0,26,0">
+            <TextBlock Text="Ostriv Studio" FontWeight="Bold" FontSize="20" />
+            <TextBlock Text="Settlement workspace" Foreground="#6A7890" FontSize="11" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="Buildings" Style="{StaticResource WorkButton}" Background="#E8F0FF" Foreground="#1C55B8" BorderThickness="0" />
+          <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
+          <Button Content="Resources" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
+          <Button Content="Run automation" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="Updates" Click="CheckUpdates_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
+          <Button x:Name="ChooseButton" Content="Choose game" Click="ChooseGame_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" />
+        </StackPanel>
       </Grid>
-      <Border Grid.Row="1" Background="#30496A" CornerRadius="6" Padding="14,11" Margin="0,20,0,16" BorderBrush="#3D5C5B" BorderThickness="1"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal"><Ellipse Width="8" Height="8" Fill="#F3C975" Margin="0,0,9,0" VerticalAlignment="Center"/><TextBlock x:Name="ConnectionTitle" Text="Ready to connect" Foreground="#F2D4A7" FontWeight="SemiBold"/><TextBlock Text="  ·  " Foreground="#809F98"/><TextBlock x:Name="ConnectionDetail" Text="Start your game and choose Find buildings." Foreground="#BFD1CB" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="1" x:Name="ConnectionBadge" Text="Experimental" Foreground="#F2D4A7" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/></Grid></Border>
-      <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="1.08*" MinWidth="270"/><ColumnDefinition Width="14"/><ColumnDefinition Width="1.7*" MinWidth="350"/><ColumnDefinition Width="14"/><ColumnDefinition Width="218"/></Grid.ColumnDefinitions>
-        <Border Background="#1D2F4D" BorderBrush="#405879" BorderThickness="1" CornerRadius="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-          <StackPanel Margin="18,17,18,13"><TextBlock Text="Your buildings" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="BuildingCount" Text="Find buildings to begin" Foreground="#A9C1BA" FontSize="11" Margin="0,4,0,0"/></StackPanel>
-          <StackPanel Grid.Row="1" Margin="17,0,17,12"><Grid><TextBox x:Name="BuildingSearch" ToolTip="Search buildings or their stock" TextChanged="BuildingSearch_Changed" Background="#13243E" Foreground="#F2F6F2" BorderBrush="#48655F" CaretBrush="#F2C17F" Padding="10,9"/><TextBlock x:Name="BuildingSearchHint" Text="Search building or stock" Foreground="#93AAA4" Margin="11,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid><ComboBox x:Name="BuildingCategory" Margin="0,10,0,0" SelectedIndex="0" SelectionChanged="BuildingCategory_Changed" ToolTip="Filter by building group"><ComboBoxItem Content="All buildings"/><ComboBoxItem Content="Storage"/><ComboBoxItem Content="Farm"/><ComboBoxItem Content="Trade"/><ComboBoxItem Content="Water"/><ComboBoxItem Content="Other buildings"/></ComboBox><CheckBox x:Name="FilterBuildingsByResource" Content="Only buildings with searched resource" Foreground="#BCD0C9" Margin="1,10,0,0" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed"/></StackPanel>
-          <DataGrid Grid.Row="2" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" ColumnHeaderStyle="{StaticResource PanelHeader}" CellStyle="{StaticResource PanelCell}" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" EnableRowVirtualization="True" RowHeight="82" HeadersVisibility="None"><DataGrid.Columns><DataGridTemplateColumn Width="*"><DataGridTemplateColumn.CellTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Width="38" Height="38" CornerRadius="19" Background="#D0A65C" VerticalAlignment="Center"><TextBlock Text="{Binding Badge}" Foreground="#1B2B43" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Grid.Column="1" VerticalAlignment="Center"><TextBlock Text="{Binding Category}" Foreground="#EDC888" FontSize="10" FontWeight="SemiBold"/><TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Summary}" Foreground="#B6C7D9" FontSize="11" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/></StackPanel></Grid></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn></DataGrid.Columns></DataGrid>
-          <TextBlock Grid.Row="3" x:Name="ScanFooter" Text="Use Ctrl or Shift to select multiple buildings." Foreground="#A7BFB7" Margin="17,10,17,13" FontSize="11" TextWrapping="Wrap"/>
-        </Grid></Border>
-        <Border Grid.Column="2" Background="#1D2F4D" BorderBrush="#405879" BorderThickness="1" CornerRadius="8"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-          <StackPanel Margin="20,18,20,14"><TextBlock x:Name="SelectedTitle" Text="Select a building" FontSize="22" FontWeight="SemiBold"/><TextBlock x:Name="SelectedSubtitle" Text="Choose a building to view its stock." Foreground="#AFC5BD" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/></StackPanel>
-          <Grid Grid.Row="1" Margin="20,0,20,12"><TextBox x:Name="ResourceSearch" ToolTip="Search resource name or ID" TextChanged="ResourceSearch_Changed" Background="#13243E" Foreground="#F2F6F2" BorderBrush="#48655F" CaretBrush="#F2C17F" Padding="10,9"/><TextBlock x:Name="ResourceSearchHint" Text="Find a resource in this building" Foreground="#93AAA4" Margin="11,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid>
-          <DataGrid Grid.Row="2" x:Name="LiveResourceGrid" Style="{StaticResource PanelGrid}" ColumnHeaderStyle="{StaticResource PanelHeader}" CellStyle="{StaticResource PanelCell}" AutoGenerateColumns="False" SelectionMode="Single"><DataGrid.Columns><DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="2.4*"/><DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="1.1*"/><DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="1.1*"/><DataGridTextColumn Header="On the way" Binding="{Binding Awaited}" Width="1.2*"/></DataGrid.Columns></DataGrid>
-          <Grid Grid.Row="3" Margin="16,12,16,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Border Background="#473E3A" BorderBrush="#587369" BorderThickness="1" CornerRadius="7" Padding="13"><StackPanel><TextBlock Text="One-time change" Foreground="#C7D8CF" FontSize="11"/><TextBlock Text="Add stock now" FontSize="15" FontWeight="SemiBold" Margin="0,3,0,3"/><TextBlock Text="Add an amount once to the selected buildings." Foreground="#B5C9BF" FontSize="11" TextWrapping="Wrap" MinHeight="31"/><Button Content="Add quantity…" Click="AddNow_Click" Style="{StaticResource WorkButton}" Background="#F0C16D" BorderBrush="#F0C16D" Foreground="#162D30" FontWeight="SemiBold" Margin="0,10,0,0" HorizontalContentAlignment="Center"/></StackPanel></Border>
-            <Border Grid.Column="2" Background="#244D5B" BorderBrush="#4F7770" BorderThickness="1" CornerRadius="7" Padding="13"><StackPanel><TextBlock Text="Saved automation" Foreground="#BCD9CE" FontSize="11"/><TextBlock Text="Keep stock available" FontSize="15" FontWeight="SemiBold" Margin="0,3,0,3"/><TextBlock Text="Save a minimum to maintain while the monitor runs." Foreground="#B5CFC2" FontSize="11" TextWrapping="Wrap" MinHeight="31"/><Button Content="Create stock rule…" Click="KeepStocked_Click" Style="{StaticResource WorkButton}" Background="#6CC6AD" BorderBrush="#6CC6AD" Foreground="#12312D" FontWeight="SemiBold" Margin="0,10,0,0" HorizontalContentAlignment="Center"/></StackPanel></Border>
+    </Border>
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="350" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <Border Background="#132238">
+        <Grid Margin="20,24,20,18">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="Your buildings" FontSize="23" FontWeight="SemiBold" Foreground="White" />
+              <Button x:Name="ScanButton" Content="Scan game" Click="Scan_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" Margin="8,0,0,0" Grid.Column="1" />
+              <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Style="{StaticResource WorkButton}" Grid.Column="1" Visibility="Collapsed" />
+            </Grid>
+            <TextBlock x:Name="BuildingCount" Text="Load a settlement, then scan" Foreground="#A8BED9" Margin="0,9,0,18" />
+            <Grid>
+              <TextBox x:Name="BuildingSearch" TextChanged="BuildingSearch_Changed" Background="#203650" Foreground="White" BorderBrush="#425D7E" Padding="12,10" />
+              <TextBlock x:Name="BuildingSearchHint" Text="Search buildings or stock" Foreground="#A4B9D3" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+            </Grid>
+            <ComboBox x:Name="BuildingCategory" SelectedIndex="0" SelectionChanged="BuildingCategory_Changed" Margin="0,10,0,0">
+              <ComboBoxItem Content="All buildings" />
+              <ComboBoxItem Content="Storage" />
+              <ComboBoxItem Content="Farm" />
+              <ComboBoxItem Content="Trade" />
+              <ComboBoxItem Content="Water" />
+              <ComboBoxItem Content="Other buildings" />
+            </ComboBox>
+            <CheckBox x:Name="FilterBuildingsByResource" Content="Match the resource search" Foreground="#C4D4E8" Margin="0,12,0,12" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+              <Button Content="Select shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
+              <Button Content="Clear selection" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
+            </StackPanel>
+          </StackPanel>
+          <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#132238" RowBackground="#132238" AlternatingRowBackground="#192C45" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Width="*">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <StackPanel VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Category}" FontSize="10" Foreground="#9FC3F1" />
+                      <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding Summary}" Foreground="#BAD0EA" FontSize="11" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+          <TextBlock Grid.Row="2" x:Name="ScanFooter" Text="Ctrl or Shift selects several buildings." Foreground="#A8BED9" FontSize="11" Margin="0,14,0,0" TextWrapping="Wrap" />
+        </Grid>
+      </Border>
+      <Grid Grid.Column="1" Margin="26,24,26,18">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Border Background="#E5EDF7" CornerRadius="6" Padding="13,11">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock x:Name="ConnectionTitle" Text="Start your settlement" Foreground="#213D65" FontWeight="SemiBold" />
+              <TextBlock x:Name="ConnectionDetail" Text="Open Ostriv and load a save, then scan." Foreground="#56667D" FontSize="11" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Grid.Column="1" x:Name="ConnectionBadge" Text="Experimental" Foreground="#5C6D84" VerticalAlignment="Center" Margin="12,0,0,0" />
           </Grid>
-        </Grid></Border>
-        <Border Grid.Column="4" Background="#243755" BorderBrush="#506787" BorderThickness="1" CornerRadius="8"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="16,18,16,16"><TextBlock Text="Building tools" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="For the current selection" Foreground="#AFC5BE" FontSize="11" Margin="0,4,0,15"/><Button Content="Capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Farm rotations…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Trade deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Export targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Bulk target preview…" Click="PreviewBulk_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Border Height="1" Background="#45635E" Margin="0,12,0,15"/><TextBlock Text="Saved rules" Foreground="#D5E5DC" FontWeight="SemiBold" Margin="0,0,0,9"/><Button Content="Preview rules" Click="PreviewRules_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Run rules…" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Button Content="Supported features" Click="Capabilities_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,7"/><Expander Header="Earlier test tools" Foreground="#AEC7BB" Margin="0,8,0,0"><StackPanel Margin="0,8,0,0"><Button Content="Fish rule…" Click="ApplySavedFish_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left" Margin="0,0,0,6"/><Button Content="Camp rules…" Click="ApplyCampRules_Click" Style="{StaticResource WorkButton}" HorizontalContentAlignment="Left"/></StackPanel></Expander></StackPanel></ScrollViewer></Border>
+        </Border>
+        <StackPanel Grid.Row="1" Margin="0,23,0,22">
+          <TextBlock x:Name="SelectedTitle" Text="Choose a building" FontSize="31" FontWeight="SemiBold" />
+          <TextBlock x:Name="SelectedSubtitle" Text="Its stock and available controls will appear here." Foreground="#56667D" Margin="0,6,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+        <TabControl Grid.Row="2" Background="White" BorderBrush="#D5DFEB" Foreground="#17253A" Padding="0">
+          <TabControl.Resources>
+            <Style TargetType="TabItem">
+              <Setter Property="Padding" Value="18,12" />
+              <Setter Property="FontSize" Value="14" />
+              <Setter Property="Background" Value="#E6ECF4" />
+              <Setter Property="Foreground" Value="#17253A" />
+              <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+                <Border x:Name="TabFrame" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0,0,0,3" Padding="{TemplateBinding Padding}">
+                  <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                </Border>
+                <ControlTemplate.Triggers>
+                  <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabFrame" Property="Background" Value="White"/><Setter TargetName="TabFrame" Property="BorderBrush" Value="#246BFD"/><Setter TargetName="TabFrame" Property="TextElement.Foreground" Value="#1C55B8"/><Setter TargetName="TabFrame" Property="TextElement.FontWeight" Value="SemiBold"/></Trigger>
+                  <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabFrame" Property="BorderBrush" Value="#8B4D12"/></Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate></Setter.Value></Setter>
+            </Style>
+          </TabControl.Resources>
+          <TabItem Header="Resources">
+            <Grid Margin="20">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Grid Margin="0,0,0,16">
+                <TextBox x:Name="ResourceSearch" TextChanged="ResourceSearch_Changed" Background="White" Foreground="#17253A" BorderBrush="#CAD5E4" CaretBrush="#246BFD" Padding="12,10" />
+                <TextBlock x:Name="ResourceSearchHint" Text="Find a resource in this building" Foreground="#75859A" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+              </Grid>
+              <DataGrid Grid.Row="1" x:Name="LiveResourceGrid" Background="White" Foreground="#17253A" RowBackground="White" AlternatingRowBackground="#F4F7FB" BorderThickness="0" GridLinesVisibility="None" RowHeight="50" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed">
+                <DataGrid.ColumnHeaderStyle>
+                  <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="#EAF0F7" />
+                    <Setter Property="Foreground" Value="#536580" />
+                    <Setter Property="Padding" Value="14,12" />
+                    <Setter Property="BorderThickness" Value="0" />
+                  </Style>
+                </DataGrid.ColumnHeaderStyle>
+                <DataGrid.CellStyle>
+                  <Style TargetType="DataGridCell">
+                    <Setter Property="Padding" Value="14,10" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Style.Triggers>
+                      <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#DAE7FF" />
+                        <Setter Property="Foreground" Value="#123A80" />
+                      </Trigger>
+                    </Style.Triggers>
+                  </Style>
+                </DataGrid.CellStyle>
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="2*" />
+                  <DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="*" />
+                  <DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="*" />
+                  <DataGridTextColumn Header="Incoming" Binding="{Binding Awaited}" Width="*" />
+                </DataGrid.Columns>
+              </DataGrid>
+              <Border Grid.Row="2" BorderBrush="#D8E1EE" BorderThickness="0,1,0,0" Padding="0,18,0,0" Margin="0,14,0,0">
+                <StackPanel>
+                  <TextBlock x:Name="ActionResource" Text="Select a resource to manage" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,13" />
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <RadioButton x:Name="AddIntent" Content="Add once" IsChecked="True" Checked="ActionIntent_Changed" Foreground="#8B4D12" FontSize="15" FontWeight="SemiBold" />
+                    <RadioButton x:Name="HoldIntent" Grid.Column="1" Content="Keep a minimum" Checked="ActionIntent_Changed" Foreground="#176554" FontSize="15" FontWeight="SemiBold" />
+                  </Grid>
+                  <TextBlock x:Name="ActionHint" Text="Choose stock above, then review a one-time addition or a saved minimum." Foreground="#56667D" TextWrapping="Wrap" Margin="0,10,0,15" />
+                  <Button x:Name="ReviewActionButton" Content="Review addition…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" IsEnabled="False" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </TabItem>
+          <TabItem Header="Building">
+            <StackPanel Margin="28">
+              <TextBlock Text="Storage &amp; capacity" FontSize="24" FontWeight="SemiBold" />
+              <TextBlock x:Name="BuildingToolsSummary" Text="Select buildings to see their available controls." TextWrapping="Wrap" Foreground="#56667D" Margin="0,12,0,20" />
+              <Button x:Name="CapacityTool" Content="Review capacity…" Click="CapacityEdit_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+              <TextBlock Text="Capacity minimums reapply while the rule monitor runs." Foreground="#56667D" TextWrapping="Wrap" Margin="0,18,0,18" />
+              <Button Content="Review saved rules" Click="PreviewRules_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+              <Button Content="Supported features" Click="Capabilities_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Margin="0,14,0,0" />
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Farms">
+            <StackPanel Margin="28">
+              <TextBlock Text="Fields &amp; crop plans" FontSize="24" FontWeight="SemiBold" />
+              <TextBlock Text="Select one grain farm. Arrange future crops, choose from 25 rotation suggestions, save your own presets, copy compatible plans or manage ploughing." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
+              <Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Background="#174F47" Foreground="White" BorderThickness="0" />
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Trading">
+            <StackPanel Margin="28">
+              <TextBlock Text="Deals &amp; export stock" FontSize="24" FontWeight="SemiBold" />
+              <TextBlock Text="Choose a city on Ostriv's world map to inspect active deals. Export targets use existing entries on selected trading posts and docks." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
+              <WrapPanel>
+                <Button Content="View active deals…" Click="TradeDeals_Click" Style="{StaticResource WorkButton}" />
+                <Button x:Name="ExportTool" Content="Manage export targets…" Click="TradingLimits_Click" Style="{StaticResource WorkButton}" />
+              </WrapPanel>
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Markets">
+            <StackPanel Margin="28">
+              <TextBlock Text="Market stock" FontSize="24" FontWeight="SemiBold" />
+              <TextBlock Text="Select a rowhouse shop, open Resources and choose Clothes, Shoes or Salt. Add once or save a minimum up to the normal 100-unit shelf target. Existing stored records only; missing goods and other market types remain inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,12,0,20" />
+              <Button Content="Find market buildings" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+            </StackPanel>
+          </TabItem>
+        </TabControl>
+        <TextBlock Grid.Row="3" x:Name="BottomStatus" Text="Your saved rules stay on this PC." Foreground="#56667D" FontSize="11" Margin="0,13,0,0" TextWrapping="Wrap" />
       </Grid>
-      <Grid Grid.Row="3" Margin="0,13,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="BottomStatus" Text="Ready to explore your settlement." Foreground="#A9C1B8" FontSize="11"/><TextBlock Grid.Column="1" Text="Snapshot values can change in game" Foreground="#88A49A" FontSize="11"/></Grid>
     </Grid>
   </Grid>
 </Window>

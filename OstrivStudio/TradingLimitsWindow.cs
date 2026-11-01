@@ -31,7 +31,7 @@ public sealed class TradingLimitsWindow : Window
         _snapshot = snapshot; _selected = selected; _invalidate = invalidate; _requiredDeal = requiredDeal;
         Title = "Export stock targets"; Width = 850; Height = 560; MinWidth = 700; MinHeight = 440;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(20, 40, 51)); Foreground = new SolidColorBrush(Color.FromRgb(240, 238, 230));
+        Background = new SolidColorBrush(Color.FromRgb(242, 245, 249)); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         var common = snapshot.Posts[0].Limits.Select(x => x.ResourceId).Where(id => snapshot.Posts.All(p => p.Limits.Any(x => x.ResourceId == id)))
             .OrderBy(id => names.GetValueOrDefault(id, $"Resource {id}"))
             .Select(id => new ResourceChoice(id, names.GetValueOrDefault(id, $"Resource {id}"))).ToArray();
@@ -41,8 +41,8 @@ public sealed class TradingLimitsWindow : Window
         _grid.Columns.Add(new DataGridTextColumn { Header = "Preview", Binding = new Binding(nameof(Row.Result)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
-        top.Children.Add(new TextBlock { Text = "Export stock targets", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Increase an existing export-stock target across selected trading posts and docks. Higher targets are left unchanged; no deal or stock amount is edited.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
+        top.Children.Add(new TextBlock { Text = "Export stock targets", FontWeight = FontWeights.SemiBold, FontSize = 28 });
+        top.Children.Add(new TextBlock { Text = "Increase an existing export-stock target across selected trading posts and docks. Higher targets are left unchanged; no deal or stock amount is edited.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         controls.Children.Add(_resource); controls.Children.Add(_amount);
         var preview = new Button { Content = "Preview changes" }; preview.Click += (_, _) => Preview(); controls.Children.Add(preview);

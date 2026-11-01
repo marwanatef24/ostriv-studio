@@ -34,12 +34,12 @@ public sealed class RuleMonitorWindow : Window
         _settingsPath = settingsPath; _profile = profile; _gamePath = gamePath; _resources = resources;
         Title = "Monitor saved rules"; Width = 1180; Height = 690; MinWidth = 850; MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#142833"));
-        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0EEE6"));
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9"));
+        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17253A"));
         var root = new DockPanel { Margin = new Thickness(25) };
         var header = new StackPanel();
         header.Children.Add(new TextBlock { Text = "Monitor saved rules", FontFamily = new FontFamily("Georgia"), FontSize = 29 });
-        header.Children.Add(new TextBlock { Text = $"Profile: {_profile}", Margin = new Thickness(0, 5, 0, 5), Foreground = Brushes.Wheat });
+        header.Children.Add(new TextBlock { Text = $"Profile: {_profile}", Margin = new Thickness(0, 5, 0, 5), Foreground = new SolidColorBrush(Color.FromRgb(139, 77, 18)) });
         _description.Text = "READ ONLY · Rules are checked repeatedly, but no automatic game edits are made. Detected buildings are candidates, not confirmed active buildings.";
         header.Children.Add(_description);
         header.Children.Add(_status); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);

@@ -17,7 +17,7 @@ public sealed class AddStockWindow : Window
     private readonly LiveResourceRow _resource;
     private readonly Action _invalidate;
     private readonly TextBox _amount = new() { Width = 180, Margin = new Thickness(0, 0, 10, 0) };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 8), Foreground = Brushes.LightGray };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 8), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) };
     private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, Margin = new Thickness(0, 14, 0, 14) };
     private readonly Button _apply = new() { Content = "Add to selected buildings…", IsEnabled = false, Padding = new Thickness(18, 11, 18, 11) };
     private decimal? _reviewedAmount;
@@ -28,12 +28,12 @@ public sealed class AddStockWindow : Window
         _scan = scan; _buildings = buildings; _resource = resource; _invalidate = invalidate;
         Title = "Add stock once"; Width = 850; Height = 590; MinWidth = 700; MinHeight = 470;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#122431")); Foreground = Brushes.White;
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9")); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         var root = new DockPanel { Margin = new Thickness(28) };
         var header = new StackPanel(); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         header.Children.Add(new TextBlock { Text = "Add stock once", FontSize = 28, FontWeight = FontWeights.SemiBold });
         header.Children.Add(new TextBlock { Text = $"Add the same amount of {resource.Name} to each selected building. This does not create a saved rule.",
-            TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray, Margin = new Thickness(0, 8, 0, 18) });
+            TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)), Margin = new Thickness(0, 8, 0, 18) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         controls.Children.Add(_amount);
         var preview = new Button { Content = "Preview addition", Padding = new Thickness(16, 9, 16, 9) };

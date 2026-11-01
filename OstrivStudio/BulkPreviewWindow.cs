@@ -25,8 +25,8 @@ public sealed class BulkPreviewWindow : Window
         _buildings = buildings; _resource = resource; _snapshot = snapshot; _invalidate = invalidate;
         Title = "Bulk target preview"; Width = 850; Height = 560; MinWidth = 700; MinHeight = 450;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(29, 44, 51));
-        Foreground = new SolidColorBrush(Color.FromRgb(234, 229, 218));
+        Background = new SolidColorBrush(Color.FromRgb(242, 245, 249));
+        Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         _grid.Columns.Add(new DataGridTextColumn { Header = "Building", Binding = new Binding(nameof(DisplayRow.Building)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Stored", Binding = new Binding(nameof(DisplayRow.Stored)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Records", Binding = new Binding(nameof(DisplayRow.Records)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });
