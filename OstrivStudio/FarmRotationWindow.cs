@@ -58,6 +58,7 @@ public sealed class FarmRotationWindow : Window
         var replace = new Button { Content = "Replace selected future crop" }; replace.Click += (_, _) => Replace();
         replaceControls.Children.Add(replace);
         var plough = new Button { Content = "Field ploughing…" }; plough.Click += Plough_Click; replaceControls.Children.Add(plough);
+        var fertility = new Button { Content = "Restore fertility…" }; fertility.Click += Fertility_Click; replaceControls.Children.Add(fertility);
         top.Children.Add(replaceControls);
         var presetControls = new WrapPanel { Margin = new Thickness(0, 14, 0, 0) };
         presetControls.Children.Add(_presets);
@@ -186,6 +187,25 @@ public sealed class FarmRotationWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception or OverflowException)
         { if (IsLoaded) MessageBox.Show(this, ex.Message, "Field settings unavailable", MessageBoxButton.OK, MessageBoxImage.Information); }
+        finally
+        {
+            _busy = false;
+            if (invalidated) { _invalidate(); Close(); }
+            else if (IsLoaded) RefreshDraft();
+        }
+    }
+    private async void Fertility_Click(object sender, RoutedEventArgs e)
+    {
+        if (_busy) return;
+        _busy = true; _status.Text = "Reading field nutrients…"; bool invalidated = false;
+        try
+        {
+            var snapshot = await Task.Run(() => FarmPloughEditor.CaptureFertilityFromGame(_farm));
+            if (!IsLoaded) return;
+            new FarmFertilityWindow(snapshot, () => invalidated = true) { Owner = this }.ShowDialog();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception or OverflowException)
+        { if (IsLoaded) MessageBox.Show(this, ex.Message, "Field nutrients unavailable", MessageBoxButton.OK, MessageBoxImage.Information); }
         finally
         {
             _busy = false;

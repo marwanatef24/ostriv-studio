@@ -83,12 +83,16 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
-          <Button Content="Resource ledger" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
-          <Button Content="Run automation" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
+          <Button Content="Start saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
         </StackPanel>
         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-          <Button Content="Updates" Click="CheckUpdates_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
           <Button x:Name="ChooseButton" Content="Choose game" Click="ChooseGame_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" />
+          <Menu VerticalAlignment="Center" Background="White" Margin="8,0,0,0">
+            <MenuItem Header="More">
+              <MenuItem Header="Resource ledger" Click="ResourceLedger_Click" />
+              <MenuItem Header="Check for updates" Click="CheckUpdates_Click" />
+            </MenuItem>
+          </Menu>
         </StackPanel>
       </Grid>
     </Border>
@@ -100,7 +104,7 @@
       </Grid.ColumnDefinitions>
       <Border Background="#102032">
         <DockPanel Margin="12,24,12,18">
-          <TextBlock DockPanel.Dock="Top" Text="WORKSPACES" Foreground="#9FB7D0" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,16" />
+          <TextBlock DockPanel.Dock="Top" Text="WHAT TO MANAGE" Foreground="#9FB7D0" FontSize="11" FontWeight="SemiBold" Margin="10,0,0,16" />
           <TextBlock DockPanel.Dock="Bottom" Text="Your profiles stay on this PC" Foreground="#9FB7D0" FontSize="11" Margin="10,0" TextWrapping="Wrap" />
           <StackPanel x:Name="WorkspaceNavigation">
             <Button Content="▦   Resources" Tag="0" Click="Workspace_Click" Style="{StaticResource WorkButton}" Background="#28425E" Foreground="White" BorderThickness="0" HorizontalContentAlignment="Left" Margin="0,0,0,8" />
@@ -124,15 +128,17 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <TextBlock Text="Your buildings" FontSize="23" FontWeight="SemiBold" Foreground="White" />
-              <Button x:Name="ScanButton" Content="Scan game" Click="Scan_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" Margin="8,0,0,0" Grid.Column="1" />
+              <TextBlock Text="1. Buildings" FontSize="23" FontWeight="SemiBold" Foreground="White" />
+              <Button x:Name="ScanButton" Content="Find" ToolTip="Find buildings in the running game" Click="Scan_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" Margin="8,0,0,0" Grid.Column="1" />
               <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" Style="{StaticResource WorkButton}" Grid.Column="1" Visibility="Collapsed" />
             </Grid>
-            <TextBlock x:Name="BuildingCount" Text="Load a settlement, then scan" Foreground="#A8BED9" Margin="0,9,0,18" />
+            <TextBlock x:Name="BuildingCount" Text="Load a settlement, then select Find" Foreground="#A8BED9" Margin="0,9,0,18" />
             <Grid>
               <TextBox x:Name="BuildingSearch" TextChanged="BuildingSearch_Changed" Background="#203650" Foreground="White" BorderBrush="#425D7E" Padding="12,10" />
               <TextBlock x:Name="BuildingSearchHint" Text="Search buildings or stock" Foreground="#A4B9D3" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
             </Grid>
+            <Expander Header="More filters" Foreground="#D6E5F6" Margin="0,12,0,10">
+            <StackPanel>
             <ComboBox x:Name="BuildingCategory" SelectedIndex="0" SelectionChanged="BuildingCategory_Changed" Margin="0,10,0,0">
               <ComboBoxItem Content="All buildings" />
               <ComboBoxItem Content="Storage" />
@@ -142,9 +148,11 @@
               <ComboBoxItem Content="Other buildings" />
             </ComboBox>
             <CheckBox x:Name="FilterBuildingsByResource" Content="Match the resource search" Foreground="#C4D4E8" Margin="0,12,0,12" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed" />
+            </StackPanel>
+            </Expander>
             <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-              <Button Content="Select shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
-              <Button Content="Clear selection" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
+              <Button Content="Select all shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
+              <Button Content="Clear" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
             </StackPanel>
           </StackPanel>
         <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#1B3048" RowBackground="#1B3048" AlternatingRowBackground="#243C57" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
@@ -198,10 +206,13 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
-              <Grid Margin="0,0,0,16">
+              <StackPanel Margin="0,0,0,16">
+              <TextBlock Text="2. Choose a resource" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+              <Grid>
                 <TextBox x:Name="ResourceSearch" TextChanged="ResourceSearch_Changed" Background="White" Foreground="#17253A" BorderBrush="#CAD5E4" CaretBrush="#246BFD" Padding="12,10" />
-                <TextBlock x:Name="ResourceSearchHint" Text="Find a resource in this building" Foreground="#75859A" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+                <TextBlock x:Name="ResourceSearchHint" Text="Search this building's resources" Foreground="#75859A" Margin="13,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
               </Grid>
+              </StackPanel>
               <DataGrid Grid.Row="1" x:Name="LiveResourceGrid" Background="White" Foreground="#17253A" RowBackground="White" AlternatingRowBackground="#F4F7FB" BorderThickness="0" GridLinesVisibility="None" RowHeight="50" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed">
                 <DataGrid.ColumnHeaderStyle>
                   <Style TargetType="DataGridColumnHeader">
@@ -232,14 +243,15 @@
               </DataGrid>
               <Border Grid.Row="2" BorderBrush="#D8E1EE" BorderThickness="0,1,0,0" Padding="0,18,0,0" Margin="0,14,0,0">
                 <StackPanel>
-                  <TextBlock x:Name="ActionResource" Text="Select a resource to manage" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,13" />
+                  <TextBlock Text="3. Choose what happens" FontSize="18" FontWeight="SemiBold" />
+                  <TextBlock x:Name="ActionResource" Text="Select a resource above" Foreground="#56667D" Margin="0,5,0,13" />
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <RadioButton x:Name="AddIntent" Content="Add once" IsChecked="True" Checked="ActionIntent_Changed" Foreground="#8B4D12" FontSize="15" FontWeight="SemiBold" />
-                    <RadioButton x:Name="HoldIntent" Grid.Column="1" Content="Keep a minimum" Checked="ActionIntent_Changed" Foreground="#176554" FontSize="15" FontWeight="SemiBold" />
+                    <Border Background="#F1F5FC" CornerRadius="8" Padding="14,12" Margin="0,0,8,0"><RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" IsChecked="True" Checked="ActionIntent_Changed" Foreground="#213D65" FontSize="15" FontWeight="SemiBold" /></Border>
+                    <Border Grid.Column="1" Background="#EAF5F0" CornerRadius="8" Padding="14,12" Margin="8,0,0,0"><RadioButton x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Checked="ActionIntent_Changed" Foreground="#176554" FontSize="15" FontWeight="SemiBold" /></Border>
                   </Grid>
                   <TextBlock x:Name="ActionHint" Text="Choose stock above, then review a one-time addition or a saved minimum." Foreground="#56667D" TextWrapping="Wrap" Margin="0,10,0,15" />
                   <Button x:Name="ReviewActionButton" Content="Review addition…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" IsEnabled="False" />
@@ -269,7 +281,7 @@
               <TextBlock x:Name="FarmSelectionSummary" Text="Select one grain farm to get started." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,24" />
               <Border Background="#E8F3EC" CornerRadius="12" Padding="22"><StackPanel>
                 <TextBlock Text="Crop rotations" FontSize="20" FontWeight="SemiBold" Foreground="#174F47" />
-                <TextBlock Text="Explore 25 suggestions, save your own plans, copy compatible rotations and manage field ploughing in one place." TextWrapping="Wrap" Foreground="#3E675B" Margin="0,10,0,18" />
+                <TextBlock Text="Plan future crops, restore field fertility and manage ploughing for selected fields." TextWrapping="Wrap" Foreground="#3E675B" Margin="0,10,0,18" />
                 <Button x:Name="FarmTool" Content="Open farm planner…" Click="FarmRotation_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" Background="#174F47" Foreground="White" BorderThickness="0" />
               </StackPanel></Border>
               <TextBlock Text="How to begin" FontSize="18" FontWeight="SemiBold" Margin="0,24,0,8" />

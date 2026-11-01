@@ -96,15 +96,28 @@ public partial class BuildingWindow : Window
     private void MarketResource_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string resource }) return;
+        var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
+        if (selected.Length == 0 || selected.Any(b => b.Candidate.ClassName != "building_rowhouse_shop"))
+        {
+            FindMarkets_Click(sender, e);
+            BuildingGrid.SelectedItem = _buildingView.Cast<BuildingRow>().FirstOrDefault(b => b.Candidate.Resources.Any(r =>
+                _resourceNames.GetValueOrDefault(r.Id, "").Equals(resource, StringComparison.OrdinalIgnoreCase)))
+                ?? _buildingView.Cast<BuildingRow>().FirstOrDefault();
+        }
         ResourceSearch.Text = resource;
         SelectWorkspace(0);
-        if (LiveResourceGrid.Items.Count > 0) LiveResourceGrid.SelectedIndex = 0;
-        BottomStatus.Text = $"Showing {resource}. Select a rowhouse shop and an existing record to add stock or save a minimum.";
+        LiveResourceGrid.SelectedItem = LiveResourceGrid.Items.OfType<LiveResourceRow>()
+            .FirstOrDefault(r => r.Name.Equals(resource, StringComparison.OrdinalIgnoreCase));
+        BottomStatus.Text = BuildingGrid.SelectedItems.Count == 0
+            ? "No rowhouse shop found. Load a settlement and find buildings, then try again."
+            : LiveResourceGrid.SelectedItem is null
+                ? $"The selected shop has no {resource} record. Select another shop or a different item."
+                : $"Showing {resource} for the selected shop. Select more shops if needed, then review the action.";
     }
     private void FindMarkets_Click(object sender, RoutedEventArgs e)
     {
         BuildingCategory.SelectedIndex = 0;
-        BuildingSearch.Text = "shop";
+        BuildingSearch.Text = "rowhouse shop";
         ResourceSearch.Text = "";
         FilterBuildingsByResource.IsChecked = false;
     }
@@ -121,15 +134,15 @@ public partial class BuildingWindow : Window
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         var resource = LiveResourceGrid.SelectedItem as LiveResourceRow;
         bool hold = HoldIntent.IsChecked == true;
-        ActionResource.Text = resource is null ? "Select a resource to manage" : $"{resource.Name} · {selected.Length} selected building(s)";
-        ReviewActionButton.Content = hold ? "Review saved minimum…" : "Review one-time addition…";
+        ActionResource.Text = resource is null ? "Select a resource above" : $"{resource.Name} · {selected.Length} selected building(s)";
+        ReviewActionButton.Content = hold ? "Set up a saved rule…" : "Choose amount to add…";
         bool supported = resource is not null && selected.Length > 0 && selected.All(b => ExistingRuleExecutor.SupportsExisting(b.Candidate.ClassName, resource.Id));
         ReviewActionButton.IsEnabled = _snapshot is not null && supported && (!hold || selected.Select(b => b.Candidate.ClassName).Distinct().Count() == 1);
         ActionHint.Text = resource is null || selected.Length == 0 ? "Choose a building and a resource above." : !supported ?
             "This building and resource combination is available for inspection. Editing is not yet verified." : hold && selected.Select(b => b.Candidate.ClassName).Distinct().Count() != 1 ?
             "Select one building type to save a minimum. One rule applies to every matching building of that type." : hold ?
-            "Save a minimum for every matching building of this type. Start the rule monitor to maintain it while you play." :
-            "Add an amount once to the selected buildings. The next step previews every quantity before writing.";
+            "Save a minimum for every building of this type. Use Start saved rules to keep it stocked while you play." :
+            "Add an amount once to the selected buildings. You can review the changes before applying them.";
         CapacityTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => CapacityObservation.SupportsClass(b.Candidate.ClassName) && b.Candidate.ObservedCapacity is not null);
         FarmTool.IsEnabled = _snapshot is not null && selected.Length == 1 && selected[0].Candidate.ClassName == "building_grain_farm";
         ExportTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => TradingStockLimits.SupportsClass(b.Candidate.ClassName));
@@ -198,7 +211,7 @@ public partial class BuildingWindow : Window
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and salt (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased, and selected future farm crops can be changed. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and salt (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {
@@ -241,9 +254,9 @@ public partial class BuildingWindow : Window
         }
         _buildingView.Refresh(); UpdateCount();
         ConnectionTitle.Text = result.Complete ? "Game connected" : "Partial scan";
-        ConnectionDetail.Text = result.Complete ? $"Read {result.BytesScanned / (1024d * 1024 * 1024):0.0} GB. Results are candidate objects, not yet validated for editing." : $"Scan incomplete: {result.UnreadableChunks} unreadable areas or the scan limit was reached.";
-        ConnectionBadge.Text = "LIMITED EDIT";
-        ScanFooter.Text = "Results can include old or non-building objects. Re-scan after loading a game; instance numbers are temporary.";
+        ConnectionDetail.Text = result.Complete ? "Choose a building, then pick an available action. Check it matches your game before editing." : $"Some game data could not be read. Find buildings again before editing ({result.UnreadableChunks} unreadable areas or scan limit reached).";
+        ConnectionBadge.Text = "PREVIEW";
+        ScanFooter.Text = "Hold Ctrl or Shift to select several buildings. Results can include old objects; find buildings again after loading a game.";
         BottomStatus.Text = "Snapshot loaded. No game changes have been made by this scan.";
         if (_buildingView.Cast<object>().Any()) BuildingGrid.SelectedIndex = 0;
     }
@@ -301,7 +314,7 @@ public partial class BuildingWindow : Window
             var window = new FarmRotationWindow(rotations, () =>
             {
                 _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
-                ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "A crop edit was attempted; previous results are invalid.";
+                ConnectionTitle.Text = "Find buildings again"; ConnectionDetail.Text = "A field change was attempted; previous results are no longer current.";
                 BottomStatus.Text = "Check the field in Ostriv; reload the backup without saving if anything is unexpected.";
             }) { Owner = this };
             window.ShowDialog();
@@ -536,7 +549,7 @@ public partial class BuildingWindow : Window
             var report = await Task.Run(() => GameInspector.Inspect(_state.GamePath));
             if (_scanCancellation is not null) return;
             ConnectionTitle.Text = report.LiveRead ? "Game connected" : "Game not running";
-            ConnectionDetail.Text = report.LiveRead ? $"Running game detected. {report.UniqueCount} of {report.Patterns.Count} legacy compatibility probes matched." : report.Detail;
+            ConnectionDetail.Text = report.LiveRead ? "Game is running. Load a settlement, then select Find to see its buildings." : report.Detail;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or BadImageFormatException or Win32Exception) { ConnectionTitle.Text = "Game check unavailable"; ConnectionDetail.Text = ex.Message; }
     }

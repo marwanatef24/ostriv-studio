@@ -12,12 +12,16 @@ public sealed record FarmPloughField(int Number, ulong Address, uint Flags)
     public bool Enabled => (Flags & 1) != 0;
 }
 public sealed record FarmPloughSnapshot(FarmRotationSnapshot Farm, IReadOnlyList<FarmPloughField> Fields);
+public sealed record FarmFertilityField(int Number, ulong Address, float Red, float Green, float Blue);
+public sealed record FarmFertilitySnapshot(FarmRotationSnapshot Farm, IReadOnlyList<FarmFertilityField> Fields);
 
 // The low bit at this offset was independently observed when toggling two
 // fields through Ostriv's UI on the exact supported executable.
 public static class FarmPloughEditor
 {
     public const int PloughOffset = 0x9f8;
+    // Correlated against Ostriv's nutrient tooltip on two separate fields of the supported build.
+    public const int FertilityOffset = 0x9e8;
     private static bool Overlap(ulong a, ulong b, ulong c, ulong d) => a < d && c < b;
     private static bool SameFarm(FarmRotationSnapshot a, FarmRotationSnapshot b) => a.FieldPointer == b.FieldPointer && a.Fields.Count == b.Fields.Count &&
         a.Fields.Zip(b.Fields).All(p => p.First.Number == p.Second.Number && p.First.Candidate.Address == p.Second.Candidate.Address &&
@@ -112,6 +116,85 @@ public static class FarmPloughEditor
     {
         using var process = CheckedProcess(farm.Scan); using var memory = new ReadOnlyMemory(farm.Scan.ProcessId);
         return Capture(farm, memory);
+    }
+    private static bool SameFertility(FarmFertilitySnapshot a, FarmFertilitySnapshot b) =>
+        SameFarm(a.Farm, b.Farm) && a.Fields.SequenceEqual(b.Fields);
+    public static FarmFertilitySnapshot CaptureFertility(FarmRotationSnapshot reviewed, FishBulkEditor.IMemory memory)
+    {
+        var farm = FarmCropEditor.Capture(reviewed.Scan, reviewed.Farm, memory);
+        if (!SameFarm(reviewed, farm)) throw new InvalidOperationException("The farm or its crop rotations changed; scan again.");
+        var fields = new List<FarmFertilityField>();
+        foreach (var field in farm.Fields)
+        {
+            ulong start = checked(field.Candidate.Address + FertilityOffset), end = checked(start + 12);
+            if (Overlap(start, end, farm.Farm.Address, checked(farm.Farm.Address + 0x8B8)) ||
+                Overlap(start, end, farm.FieldPointer, checked(farm.FieldPointer + (ulong)farm.Fields.Count * 8)) ||
+                farm.Scan.UiCandidates.Any(ui => Overlap(start, end, ui.Address, checked(ui.Address + 8))) ||
+                farm.Fields.Any(other => Overlap(start, end, other.CropPointer, checked(other.CropPointer + (ulong)other.Crops.Count * 4))) ||
+                farm.Scan.Buildings.Any(b => (b.Address != field.Candidate.Address && Overlap(start, end, b.Address,
+                    checked(b.Address + (ulong)(b.ClassName == "building_grain_field" ? PloughOffset + 4 : farm.Scan.PointerOffset + 8)))) ||
+                    (b.ResourceCount > 0 && b.ResourcePointer != 0 && Overlap(start, end, b.ResourcePointer, checked(b.ResourcePointer + (ulong)b.ResourceCount * 20)))))
+                throw new InvalidOperationException("A field's nutrients overlap another observed object.");
+            byte[] first = memory.Read(start, 12), second = memory.Read(start, 12);
+            if (first.Length != 12 || !first.AsSpan().SequenceEqual(second)) throw new InvalidOperationException("A field's nutrients changed while reading.");
+            float red = BitConverter.ToSingle(first, 0), green = BitConverter.ToSingle(first, 4), blue = BitConverter.ToSingle(first, 8);
+            if (new[] { red, green, blue }.Any(value => !float.IsFinite(value) || value < 0 || value > 1))
+                throw new InvalidOperationException("A field has an unexpected nutrient value.");
+            fields.Add(new(field.Number, field.Candidate.Address, red, green, blue));
+        }
+        if (!SameFarm(farm, FarmCropEditor.Capture(reviewed.Scan, reviewed.Farm, memory)))
+            throw new InvalidOperationException("The farm changed while reading its nutrients.");
+        return new(farm, fields.AsReadOnly());
+    }
+    public static int RestoreFertilityChecked(FarmFertilitySnapshot reviewed, IReadOnlyList<int> fieldNumbers, FishBulkEditor.IMemory memory)
+    {
+        if (fieldNumbers.Count is < 1 or > 255 || fieldNumbers.Distinct().Count() != fieldNumbers.Count ||
+            fieldNumbers.Any(n => reviewed.Fields.All(f => f.Number != n))) throw new InvalidOperationException("Select distinct reviewed fields.");
+        var expected = CaptureFertility(reviewed.Farm, memory);
+        if (!SameFertility(reviewed, expected)) throw new InvalidOperationException("A field's nutrients changed since review; open it again.");
+        int attempted = 0;
+        try
+        {
+            foreach (int number in fieldNumbers.Order())
+            {
+                var field = expected.Fields.Single(f => f.Number == number);
+                if (field.Red == 1 && field.Green == 1 && field.Blue == 1) continue;
+                if (!SameFertility(expected, CaptureFertility(reviewed.Farm, memory))) throw new InvalidOperationException("A field changed before the edit.");
+                byte[] full = [.. BitConverter.GetBytes(1f), .. BitConverter.GetBytes(1f), .. BitConverter.GetBytes(1f)];
+                attempted++; memory.Write(checked(field.Address + FertilityOffset), full);
+                expected = expected with { Fields = expected.Fields.Select(f => f.Number == number ? f with { Red = 1, Green = 1, Blue = 1 } : f).ToArray() };
+                if (!SameFertility(expected, CaptureFertility(reviewed.Farm, memory))) throw new InvalidOperationException("The nutrients did not pass readback.");
+            }
+        }
+        catch (Exception ex) when (attempted > 0)
+        { throw new PartialGameWriteException("The fertility batch may be partial. Do not save; reload the verified backup. " + ex.Message, ex); }
+        return attempted;
+    }
+    public static FarmFertilitySnapshot CaptureFertilityFromGame(FarmRotationSnapshot farm)
+    {
+        using var process = CheckedProcess(farm.Scan); using var memory = new ReadOnlyMemory(farm.Scan.ProcessId);
+        return CaptureFertility(farm, memory);
+    }
+    public static int RestoreFertilityInGame(FarmFertilitySnapshot reviewed, IReadOnlyList<int> fields, CancellationToken cancellation)
+    {
+        using var process = CheckedProcess(reviewed.Farm.Scan);
+        ulong moduleBase = checked((ulong)process.MainModule!.BaseAddress.ToInt64());
+        using var memory = new ExistingRuleExecutor.ProcessMemory(reviewed.Farm.Scan.ProcessId);
+        var image = BuildingDiscovery.LoadImage(reviewed.Farm.Scan.GamePath).Image;
+        const int pauseFunction = 0x3f5ec0, checkedLength = 32;
+        if (!image.AsSpan(pauseFunction, checkedLength).SequenceEqual(memory.Read(moduleBase + pauseFunction, checkedLength)))
+            throw new InvalidOperationException("The running game's pause control differs from the tested build.");
+        var pause = new GamePauseControl(memory, moduleBase); pause.Acquire(cancellation); int applied = 0;
+        try
+        {
+            cancellation.ThrowIfCancellationRequested(); pause.EnsurePaused();
+            applied = RestoreFertilityChecked(reviewed, fields, new GuardedMemory(memory, pause));
+            pause.Resume(); return applied;
+        }
+        catch (PartialGameWriteException) { throw; }
+        catch (Exception ex) when (applied > 0)
+        { throw new PartialGameWriteException("Nutrients changed but the game state could not be restored. Reload the backup if uncertain. " + ex.Message, ex); }
+        catch { pause.ResumeAfterPreflightFailure(); throw; }
     }
     public static int ApplyToGame(FarmPloughSnapshot reviewed, IReadOnlyList<int> fields, bool enabled, CancellationToken cancellation)
     {
