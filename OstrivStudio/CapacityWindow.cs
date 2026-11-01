@@ -29,8 +29,8 @@ public sealed class CapacityWindow : Window
     {
         Title = "Capacity rules"; Width = 780; Height = 560; MinWidth = 650; MinHeight = 440;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#142833"));
-        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F0EEE6"));
+        Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9"));
+        Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#17253A"));
         foreach (var r in rules) _rows.Add(new() { Id = r.LegacyBuildingId, Building = r.BuildingType, Amount = r.Capacity.ToString(CultureInfo.CurrentCulture), Enabled = r.Enabled });
         _building.ItemsSource = LegacyBuildingCatalog.All.Select(x => new BuildingOption(x.Key, x.Value)).ToArray();
         _building.SelectedIndex = 0;
@@ -41,7 +41,7 @@ public sealed class CapacityWindow : Window
         _grid.Columns.Add(new DataGridTextColumn { Header = "Original ID", Binding = new Binding(nameof(CapacityRow.Id)), IsReadOnly = true, Width = 90 });
         var root = new DockPanel { Margin = new Thickness(25) };
         var top = new StackPanel();
-        top.Children.Add(new TextBlock { Text = "Capacity rules", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
+        top.Children.Add(new TextBlock { Text = "Capacity rules", FontWeight = FontWeights.SemiBold, FontSize = 28 });
         top.Children.Add(new TextBlock { Text = "Saved with this profile. When you start the rule monitor, enabled rules can keep granary, warehouse and big hay barrack capacity at least at this value. Other types are shown as unsupported.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 15) });
         var tools = new WrapPanel { Margin = new Thickness(0, 0, 0, 15) };
         tools.Children.Add(_building);

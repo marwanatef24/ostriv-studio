@@ -14,17 +14,17 @@ public sealed class FarmPloughWindow : Window
     private readonly FarmPloughSnapshot _snapshot;
     private readonly Action _invalidate;
     private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, SelectionMode = DataGridSelectionMode.Extended, SelectionUnit = DataGridSelectionUnit.FullRow, Margin = new Thickness(0, 14, 0, 14) };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray, Margin = new Thickness(0, 8, 0, 0) };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)), Margin = new Thickness(0, 8, 0, 0) };
     private bool _busy;
     public FarmPloughWindow(FarmPloughSnapshot snapshot, Action invalidate)
     {
         _snapshot = snapshot; _invalidate = invalidate;
         Title = "Field ploughing"; Width = 680; Height = 500; MinWidth = 560; MinHeight = 400;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#122431")); Foreground = Brushes.White;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9")); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         top.Children.Add(new TextBlock { Text = "Field ploughing", FontSize = 27, FontWeight = FontWeights.SemiBold });
-        top.Children.Add(new TextBlock { Text = "Select one or more fields, then turn ploughing on or off. Use Ctrl or Shift to select several fields.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.LightGray, Margin = new Thickness(0, 8, 0, 0) });
+        top.Children.Add(new TextBlock { Text = "Select one or more fields, then turn ploughing on or off. Use Ctrl or Shift to select several fields.", TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)), Margin = new Thickness(0, 8, 0, 0) });
         top.Children.Add(_status);
         _grid.Columns.Add(new DataGridTextColumn { Header = "Field", Binding = new Binding(nameof(Row.Name)), Width = new DataGridLength(2, DataGridLengthUnitType.Star) });
         _grid.Columns.Add(new DataGridTextColumn { Header = "Ploughing", Binding = new Binding(nameof(Row.Plough)), Width = new DataGridLength(1, DataGridLengthUnitType.Star) });

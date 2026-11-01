@@ -23,6 +23,8 @@ public sealed class TradeDealsWindow : Window
     private readonly ComboBox _post = new() { Width = 260, Margin = new Thickness(0, 0, 10, 0) };
     private sealed record PostChoice(BuildingRow Building) { public override string ToString() => Building.Name + "  ·  " + Building.Summary; }
     private readonly PostChoice[] _choices;
+    private TradeDeal[] _visibleDeals = [];
+    private readonly Button _allocate = new() { Content = "Allocate exports across buildings…", IsEnabled = false };
     private (int Id, string Type)? _pending;
     public TradeDealsWindow(DiscoveryResult scan, IReadOnlyDictionary<int, string> names, IReadOnlyList<TradeDeal> deals, Action<int, string> find,
         IReadOnlyDictionary<ulong, BuildingRow> buildingRows, Action invalidate)
@@ -30,7 +32,7 @@ public sealed class TradeDealsWindow : Window
         _scan = scan; _names = names; _find = find; _invalidate = invalidate;
         Title = "Trade deals"; Width = 1000; Height = 610; MinWidth = 820; MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Background = new SolidColorBrush(Color.FromRgb(20, 40, 51)); Foreground = new SolidColorBrush(Color.FromRgb(240, 238, 230));
+        Background = new SolidColorBrush(Color.FromRgb(242, 245, 249)); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         void Column(string name, string property, double width) => _grid.Columns.Add(new DataGridTextColumn { Header = name, Binding = new Binding(property), Width = new DataGridLength(width, DataGridLengthUnitType.Star) });
         Column("City", nameof(Row.City), 1.4); Column("Resource", nameof(Row.Resource), 1.7); Column("Type", nameof(Row.Direction), 0.9);
         Column("Total", nameof(Row.Total), 0.8); Column("Completed", nameof(Row.Completed), 1); Column("Remaining", nameof(Row.Remaining), 1); Column("Trade stock", nameof(Row.Stock), 1.3);
@@ -39,14 +41,15 @@ public sealed class TradeDealsWindow : Window
         _grid.SelectionChanged += (_, _) => SelectBuildingChoices(); _post.SelectionChanged += (_, _) => UpdateActions();
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
-        top.Children.Add(new TextBlock { Text = "Trade deals", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Open the world map in Ostriv and select a city. This view reads that city’s visible deals; trading-stock amounts are from the last building scan.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14), Foreground = Brushes.LightGray });
+        top.Children.Add(new TextBlock { Text = "Trade deals", FontWeight = FontWeights.SemiBold, FontSize = 28 });
+        top.Children.Add(new TextBlock { Text = "Open the world map in Ostriv and select a city. This view reads that city’s visible deals; trading-stock amounts are from the last building scan.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 14), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) });
         top.Children.Add(_status);
         var action = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
         action.Children.Add(_post); action.Children.Add(_prepare); top.Children.Add(action);
         var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         _refresh.Click += Refresh_Click; _findStock.Click += Find_Click; _prepare.Click += Prepare_Click;
-        bottom.Children.Add(_refresh); bottom.Children.Add(_findStock); bottom.Children.Add(new Button { Content = "Close", IsCancel = true });
+        _allocate.Click += Allocate_Click;
+        bottom.Children.Add(_refresh); bottom.Children.Add(_findStock); bottom.Children.Add(_allocate); bottom.Children.Add(new Button { Content = "Close", IsCancel = true });
         DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom); root.Children.Add(_grid); Content = root;
         Closed += (_, _) => { if (_pending is { } p) _find(p.Id, p.Type); };
         ShowDeals(deals);
@@ -69,6 +72,8 @@ public sealed class TradeDealsWindow : Window
     }
     private void ShowDeals(IReadOnlyList<TradeDeal> deals)
     {
+        _visibleDeals = deals.ToArray();
+        _allocate.IsEnabled = deals.Any(d => !d.IsImport && d.Remaining > 0 && d.TradingBuildingClass is not null) && _choices.Length > 0;
         _grid.ItemsSource = deals.Select(deal =>
         {
             var buildings = _scan.Buildings.Where(b => b.ClassName == deal.TradingBuildingClass).ToArray();
@@ -80,6 +85,15 @@ public sealed class TradeDealsWindow : Window
         _status.Text = deals.Count == 0 ? "No deals are visible for the selected city. Keep the world map open and choose a city with an active deal." :
             $"{deals.Count} visible deal(s). Select an export and a matching trading post or dock to prepare its remaining quantity as an existing export target.";
         if (deals.Count > 0) _grid.SelectedIndex = 0;
+    }
+    private void Allocate_Click(object sender, RoutedEventArgs e)
+    {
+        var exports = _visibleDeals.Where(d => !d.IsImport && d.Remaining > 0).ToArray();
+        var types = exports.Select(d => d.TradingBuildingClass).Distinct().ToArray();
+        if (exports.Length == 0 || types.Length != 1 || types[0] is null) { _status.Text = "Choose a known city with remaining export deals."; return; }
+        var buildings = _choices.Where(c => c.Building.Candidate.ClassName == types[0]).Select(c => c.Building).ToArray();
+        new TradeAllocationWindow(_scan, exports, buildings, _names, () => { _invalidated = true; _invalidate(); }) { Owner = this }.ShowDialog();
+        if (_invalidated) Close();
     }
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {

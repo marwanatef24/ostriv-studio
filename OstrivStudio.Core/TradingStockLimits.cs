@@ -136,6 +136,67 @@ public static class TradingStockLimits
         }
         catch { process.Dispose(); throw; }
     }
+    public static int CountAllocationChanges(TradingLimitsSnapshot snapshot, IReadOnlyList<ExportAllocation> plan)
+    {
+        if (plan.Count is < 1 or > 8192 || plan.Select(p => (p.BuildingAddress, p.ResourceId)).Distinct().Count() != plan.Count)
+            throw new InvalidOperationException("The export allocation is empty or duplicated.");
+        int count = 0;
+        foreach (var p in plan)
+        {
+            ValidateTarget(p.ResourceId, p.Minimum);
+            var post = snapshot.Posts.SingleOrDefault(b => b.Building.Address == p.BuildingAddress) ?? throw new InvalidOperationException("An allocation building was not reviewed.");
+            if (post.Limits.Count(l => l.ResourceId == p.ResourceId) != 1) throw new InvalidOperationException("Every allocated resource must already have an export-stock entry on its building.");
+            if ((decimal)post.Limits.Single(l => l.ResourceId == p.ResourceId).Target < p.Minimum) count++;
+        }
+        return count;
+    }
+    public static int ApplyAllocationsChecked(TradingLimitsSnapshot reviewed, IReadOnlyList<ExportAllocation> plan, FishBulkEditor.IMemory memory)
+    {
+        int changes = CountAllocationChanges(reviewed, plan), attempted = 0;
+        var selected = reviewed.Posts.Select(p => p.Building).ToArray();
+        var expected = Capture(reviewed.Scan, selected, memory);
+        if (!Same(reviewed, expected)) throw new InvalidOperationException("Export-stock settings changed since review.");
+        try
+        {
+            foreach (var p in plan)
+            {
+                int index = expected.Posts.ToList().FindIndex(b => b.Building.Address == p.BuildingAddress);
+                var post = expected.Posts[index]; var entry = post.Limits.Single(l => l.ResourceId == p.ResourceId);
+                if ((decimal)entry.Target >= p.Minimum) continue;
+                if (!Same(expected, Capture(reviewed.Scan, selected, memory))) throw new InvalidOperationException("Export settings changed before a write.");
+                attempted++;
+                memory.Write(checked(post.Pointer + (ulong)(entry.Index * RecordSize + 4)), BitConverter.GetBytes((float)p.Minimum));
+                byte[] revised = Convert.FromBase64String(post.Bytes); BitConverter.GetBytes((float)p.Minimum).CopyTo(revised, entry.Index * RecordSize + 4);
+                var posts = expected.Posts.ToArray(); posts[index] = post with { Bytes = Convert.ToBase64String(revised), Limits = post.Limits.Select(l => l.Index == entry.Index ? l with { Target = (float)p.Minimum } : l).ToArray() };
+                expected = expected with { Posts = posts };
+                if (!Same(expected, Capture(reviewed.Scan, selected, memory))) throw new InvalidOperationException("Export allocation readback did not match.");
+            }
+            return changes;
+        }
+        catch (Exception ex) when (attempted > 0) { throw new PartialGameWriteException("Export allocations may be partial. Reload the verified backup. " + ex.Message, ex); }
+    }
+    public static int ApplyAllocationsToGame(TradingLimitsSnapshot reviewed, IReadOnlyList<TradeDeal> deals, TradeAllocationMode mode, CancellationToken cancellation)
+    {
+        var plan = TradeAllocationPlanner.Create(deals, reviewed.Posts.Select(p => p.Building).ToArray(), mode);
+        _ = CountAllocationChanges(reviewed, plan);
+        cancellation.ThrowIfCancellationRequested();
+        using var process = CheckedProcess(reviewed.Scan);
+        ulong moduleBase = checked((ulong)process.MainModule!.BaseAddress.ToInt64());
+        using var memory = new ExistingRuleExecutor.ProcessMemory(reviewed.Scan.ProcessId);
+        var image = BuildingDiscovery.LoadImage(reviewed.Scan.GamePath).Image;
+        if (!image.AsSpan(0x3f5ec0, 32).SequenceEqual(memory.Read(moduleBase + 0x3f5ec0, 32))) throw new InvalidOperationException("The running pause control differs from the tested build.");
+        var pause = new GamePauseControl(memory, moduleBase); pause.Acquire(cancellation); int applied = 0;
+        try
+        {
+            cancellation.ThrowIfCancellationRequested(); pause.EnsurePaused();
+            foreach (var deal in deals) TradeDealReader.RequireUnchanged(reviewed.Scan, memory, deal);
+            applied = ApplyAllocationsChecked(reviewed, plan, new GuardedMemory(memory, pause));
+            pause.Resume(); return applied;
+        }
+        catch (PartialGameWriteException) { throw; }
+        catch (Exception ex) when (applied > 0) { throw new PartialGameWriteException("Export targets changed but the game could not resume. Reload the backup. " + ex.Message, ex); }
+        catch { pause.ResumeAfterPreflightFailure(); throw; }
+    }
     private sealed class ReadOnlyMemory : FishBulkEditor.IMemory, IDisposable
     {
         [DllImport("kernel32.dll", SetLastError = true)] private static extern SafeProcessHandle OpenProcess(uint access, bool inherit, int id);

@@ -26,6 +26,8 @@ public static class ManualStockEditor
                 throw new InvalidOperationException("One selected building or resource is not supported for a one-time addition.");
             var stored = b.Resources.Where(r => r.Id == resourceId && r.Status == 0).ToArray();
             if (stored.Length == 0) throw new InvalidOperationException("Every selected building must already contain this stored resource.");
+            if (b.ClassName == "building_rowhouse_shop" && stored.Sum(r => (decimal)r.Amount) + amount > 100)
+                throw new InvalidOperationException("Retail additions cannot exceed the observed 100-unit shelf target.");
             decimal next = (decimal)stored[0].Amount + amount;
             if (next > 1_000_000_000m || (decimal)(float)next != next)
                 throw new InvalidOperationException("The resulting quantity cannot be represented exactly.");

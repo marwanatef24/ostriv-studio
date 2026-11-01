@@ -23,6 +23,9 @@ public static class ExistingRuleExecutor
         // Only existing broadcloth and clothes records were corroborated in
         // a live trading dock on the supported executable.
         "building_trading_dock" => id is 92 or 46,
+        // Standard existing records corroborated in retail shops. No retail
+        // insertion and no edits to their separate incoming-demand list.
+        "building_rowhouse_shop" => id is 46 or 47 or 93,
         var name => Classes.Contains(name)
     };
     private static readonly HashSet<int> CampInsertions = [6, 9, 10, 18, 33, 36, 69, 80, 85, 92, 109, 123, 133];
@@ -54,6 +57,8 @@ public static class ExistingRuleExecutor
             if (assessment.Rows[i].State == "Conflicting rules") { skipped.Add(prefix + "conflicting rule"); continue; }
             if (rule.Target is null || rule.BuildingLimit == 0 || !SupportsExisting(rule.BuildingType, rule.ResourceId))
             { skipped.Add(prefix + "unsupported target, building, mode or limit"); continue; }
+            if (rule.BuildingType.Trim().Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase) && rule.Target > 100)
+            { skipped.Add(prefix + "retail minimums are limited to the observed 100-unit shelf target"); continue; }
             var matches = scan.Buildings.Where(b => string.Equals(b.ClassName, rule.BuildingType.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
             if (matches.Length == 0) { skipped.Add(prefix + "no matching building candidates"); continue; }
             if (rule.BuildingLimit > 0 && matches.Length > rule.BuildingLimit)

@@ -130,7 +130,7 @@ public partial class ResourceOverviewWindow : Window
         double min = series.Min(x => x.Stored), max = series.Max(x => x.Stored), range = max - min;
         var baseline = new Line { X1 = 0, Y1 = height - 2, X2 = width, Y2 = height - 2, Stroke = new SolidColorBrush(Color.FromRgb(84, 111, 114)), StrokeThickness = 1 };
         TrendCanvas.Children.Add(baseline);
-        var path = new Polyline { Stroke = new SolidColorBrush(Color.FromRgb(240, 193, 127)), StrokeThickness = 2.5, StrokeLineJoin = PenLineJoin.Round };
+        var path = new Polyline { Stroke = new SolidColorBrush(Color.FromRgb(36, 107, 253)), StrokeThickness = 2.5, StrokeLineJoin = PenLineJoin.Round };
         for (int i = 0; i < series.Count; i++)
         {
             double x = i * (width - 3) / (series.Count - 1);

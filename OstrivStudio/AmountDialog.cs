@@ -11,7 +11,7 @@ public sealed class AmountDialog : Window
     public AmountDialog(int count)
     {
         Title = "Set profile targets"; SizeToContent = SizeToContent.WidthAndHeight; WindowStartupLocation = WindowStartupLocation.CenterOwner; ResizeMode = ResizeMode.NoResize;
-        Background = new SolidColorBrush(Color.FromRgb(25, 39, 31)); Foreground = new SolidColorBrush(Color.FromRgb(232, 237, 229));
+        Background = new SolidColorBrush(Color.FromRgb(242, 245, 249)); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         var stack = new StackPanel { Margin = new Thickness(24) };
         stack.Children.Add(new TextBlock { Text = $"Target amount for {count} selected resources", FontSize = 16, FontWeight = FontWeights.SemiBold });
         stack.Children.Add(new TextBlock { Text = "This changes the profile only.", Margin = new Thickness(0, 6, 0, 0) }); stack.Children.Add(_input);

@@ -45,6 +45,9 @@ public partial class BuildingWindow : Window
     public BuildingWindow()
     {
         InitializeComponent();
+        string version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "preview";
+        ReleaseLabel.Text = $"Version {version} · Settlement workspace";
+        Title = $"Ostriv Studio {version} · Settlement workspace";
         _buildingView = CollectionViewSource.GetDefaultView(_buildings);
         _buildingView.Filter = x => x is BuildingRow row && (BuildingCategory.SelectedIndex <= 0 || (BuildingCategory.SelectedItem as ComboBoxItem)?.Content?.ToString() == row.Category) && (string.IsNullOrWhiteSpace(BuildingSearch.Text) || row.Name.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Summary.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase)) &&
             (FilterBuildingsByResource.IsChecked != true || string.IsNullOrWhiteSpace(ResourceSearch.Text) || row.Candidate.Resources.Any(r =>
@@ -72,6 +75,45 @@ public partial class BuildingWindow : Window
         ConnectionDetail.Text = string.IsNullOrWhiteSpace(_state.GamePath) ? "Choose your Ostriv executable to begin." : _state.GamePath;
         Closing += (_, _) => _scanCancellation?.Cancel();
         Loaded += async (_, _) => { await CheckConnectionAsync(); await UpdateService.CheckAsync(this, false); };
+        UpdateActions();
+    }
+
+    private void SelectShown_Click(object sender, RoutedEventArgs e) => BuildingGrid.SelectAll();
+    private void ClearSelection_Click(object sender, RoutedEventArgs e) => BuildingGrid.UnselectAll();
+    private void FindMarkets_Click(object sender, RoutedEventArgs e)
+    {
+        BuildingCategory.SelectedIndex = 0;
+        BuildingSearch.Text = "shop";
+        ResourceSearch.Text = "";
+        FilterBuildingsByResource.IsChecked = false;
+    }
+    private void ResourceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateActions();
+    private void ActionIntent_Changed(object sender, RoutedEventArgs e) => UpdateActions();
+    private void ReviewAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (HoldIntent.IsChecked == true) KeepStocked_Click(sender, e);
+        else AddNow_Click(sender, e);
+    }
+    private void UpdateActions()
+    {
+        if (ReviewActionButton is null || BuildingGrid is null || LiveResourceGrid is null) return;
+        var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
+        var resource = LiveResourceGrid.SelectedItem as LiveResourceRow;
+        bool hold = HoldIntent.IsChecked == true;
+        ActionResource.Text = resource is null ? "Select a resource to manage" : $"{resource.Name} · {selected.Length} selected building(s)";
+        ReviewActionButton.Content = hold ? "Review saved minimum…" : "Review one-time addition…";
+        bool supported = resource is not null && selected.Length > 0 && selected.All(b => ExistingRuleExecutor.SupportsExisting(b.Candidate.ClassName, resource.Id));
+        ReviewActionButton.IsEnabled = _snapshot is not null && supported && (!hold || selected.Select(b => b.Candidate.ClassName).Distinct().Count() == 1);
+        ActionHint.Text = resource is null || selected.Length == 0 ? "Choose a building and a resource above." : !supported ?
+            "This building and resource combination is available for inspection. Editing is not yet verified." : hold && selected.Select(b => b.Candidate.ClassName).Distinct().Count() != 1 ?
+            "Select one building type to save a minimum. One rule applies to every matching building of that type." : hold ?
+            "Save a minimum for every matching building of this type. Start the rule monitor to maintain it while you play." :
+            "Add an amount once to the selected buildings. The next step previews every quantity before writing.";
+        CapacityTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => CapacityObservation.SupportsClass(b.Candidate.ClassName) && b.Candidate.ObservedCapacity is not null);
+        FarmTool.IsEnabled = _snapshot is not null && selected.Length == 1 && selected[0].Candidate.ClassName == "building_grain_farm";
+        ExportTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => TradingStockLimits.SupportsClass(b.Candidate.ClassName));
+        BuildingToolsSummary.Text = selected.Length == 0 ? "Select a building in the browser. Capacity controls support granaries, warehouses and big hay barracks." :
+            $"{selected.Length} building(s) selected. " + (CapacityTool.IsEnabled ? "These buildings have a supported observed capacity." : "Capacity editing is unavailable for this selection. Choose supported storage buildings with an observed capacity.");
     }
 
     private static string DisplayName(string input) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input.Replace('_', ' ').ToLowerInvariant());
@@ -126,11 +168,11 @@ public partial class BuildingWindow : Window
     {
         var selected = BuildingGrid.SelectedItem as BuildingRow;
         string type = selected?.Candidate.ClassName ?? "";
-        bool supported = type is "building_camp_storage" or "building_granary" or "building_warehouse" or "building_well" or "building_stone_mining_camp" or "building_fishery" or "building_trading_post" or "building_trading_dock" or "building_ashery" or "building_brickworks";
+        bool supported = type is "building_camp_storage" or "building_granary" or "building_warehouse" or "building_well" or "building_stone_mining_camp" or "building_fishery" or "building_trading_post" or "building_trading_dock" or "building_ashery" or "building_brickworks" or "building_rowhouse_shop";
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased, and selected future farm crops can be changed. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, markets, deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop clothes, shoes and salt (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased, and selected future farm crops can be changed. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {
@@ -141,14 +183,17 @@ public partial class BuildingWindow : Window
     private void Building_Changed(object sender, SelectionChangedEventArgs e)
     {
         _observations.Clear();
-        if (BuildingGrid.SelectedItem is not BuildingRow row) { SelectedTitle.Text = "Select a building"; SelectedSubtitle.Text = "Choose a result to inspect its detected resource records."; return; }
-        SelectedTitle.Text = row.Name;
-        SelectedSubtitle.Text = $"{row.Candidate.Resources.Count} records in this snapshot. Instance numbers may change after a scan." +
+        if (BuildingGrid.SelectedItem is not BuildingRow row) { SelectedTitle.Text = "Choose a building"; SelectedSubtitle.Text = "Its stock and available controls will appear here."; UpdateActions(); return; }
+        int selectedCount = BuildingGrid.SelectedItems.Count;
+        SelectedTitle.Text = selectedCount > 1 ? $"{selectedCount} buildings selected" : row.Name;
+        SelectedSubtitle.Text = (selectedCount > 1 ? $"The resource table shows {row.Name}. One-time actions use all {selectedCount} selected buildings. " : "") +
+            $"{row.Candidate.Resources.Count} records in this snapshot. Instance numbers may change after a scan." +
             (row.Candidate.ObservedCapacity is float capacity ? $" Observed capacity: {capacity:N0} (check in game)." : "");
         static string FormatAmount(double value) => value.ToString("0.##", CultureInfo.CurrentCulture);
         foreach (var total in BuildingDiscovery.Summarize(row.Candidate.Resources).OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
             _observations.Add(new(_resourceNames.GetValueOrDefault(total.Id, $"Unknown resource {total.Id}"), total.Id,
                 FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other)));
+        UpdateActions();
     }
     private void AdoptScan(DiscoveryResult result, DateTime observedUtc)
     {
@@ -329,7 +374,8 @@ public partial class BuildingWindow : Window
                 throw new InvalidOperationException("The selected profile changed in another window. Reopen profiles and try again.");
             var settings = fresh.AutomationProfiles[fresh.SelectedProfile];
             var existing = settings.MaintenanceRules.SingleOrDefault(r => r.ResourceId == resource.Id && string.Equals(r.BuildingType.Trim(), type, StringComparison.OrdinalIgnoreCase));
-            var dialog = new KeepStockedWindow(resource.Name, DisplayName(type["building_".Length..]), fresh.SelectedProfile, existing?.Target) { Owner = this };
+            var dialog = new KeepStockedWindow(resource.Name, DisplayName(type["building_".Length..]), fresh.SelectedProfile, existing?.Target,
+                type == "building_rowhouse_shop" ? 100 : 1_000_000_000m) { Owner = this };
             if (dialog.ShowDialog() != true) return;
             if (existing is not null && MessageBox.Show(this, "This replaces the existing rule for this resource and building type with an enabled per-building rule. Continue?", "Replace existing rule?", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             byte[] after = File.Exists(_settingsPath) ? SHA256.HashData(File.ReadAllBytes(_settingsPath)) : [];

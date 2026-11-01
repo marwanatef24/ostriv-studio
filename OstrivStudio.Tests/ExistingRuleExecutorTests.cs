@@ -49,10 +49,23 @@ internal static class ExistingRuleExecutorTests
     }
     public static void Run()
     {
+        Check(new[] {46,47,93}.All(id => ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", id)) &&
+            !ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 7) && !ExistingRuleExecutor.SupportsInsertion("building_rowhouse_shop", 46),
+            "retail edits allow only existing clothes, shoes and salt records");
         Check(ExistingRuleExecutor.SupportsExisting("building_trading_dock", 92) && ExistingRuleExecutor.SupportsExisting("building_trading_dock", 46) &&
             !ExistingRuleExecutor.SupportsExisting("building_trading_dock", 87) && !ExistingRuleExecutor.SupportsInsertion("building_trading_dock", 92),
             "trading-dock stock support is limited to corroborated existing records");
         var (profile, scan, memory) = Fixture();
+        var retail = scan.Buildings[2] with { ClassName = "building_rowhouse_shop", Resources = [new(0,46,50,0,0xbf800000,0)] };
+        var retailProfile = new ProfileDocument();
+        retailProfile.AutomationProfiles[retailProfile.SelectedProfile].MaintenanceRules = [new() { BuildingType=retail.ClassName, ResourceId=46, Target=101, Enabled=true }];
+        var retailScan = scan with { Buildings = [retail] };
+        Check(ExistingRuleExecutor.Prepare(retailProfile, retailScan).Entries.Count == 0,
+            "retail minimums above 100 are blocked before writing");
+        retailProfile.AutomationProfiles[retailProfile.SelectedProfile].MaintenanceRules[0].Target = 100;
+        Check(ExistingRuleExecutor.Prepare(retailProfile, retailScan).Entries is [{Target:100,Insert:false}], "existing retail stock can be replenished to 100");
+        try { ManualStockEditor.Prepare(retailScan, [retail], 46, 51); throw new Exception("Retail overfill accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS one-time retail additions cannot overfill the shelf target"); }
         var plan = ExistingRuleExecutor.Prepare(profile, scan);
         Check(plan.Entries.Count == 4 && plan.Entries.Single(e => e.Record.Id == 87).Insert, "batch plans missing barley insertion alongside existing resources");
         Check(ExistingRuleExecutor.ApplyChecked(profile, scan, memory) == 4 && memory.Writes == 5 &&
