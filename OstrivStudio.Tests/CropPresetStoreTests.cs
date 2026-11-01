@@ -16,6 +16,16 @@ internal static class CropPresetStoreTests
         Console.WriteLine("PASS every built-in rotation preserves all crops when aligned to each possible current crop");
         try { CropPresetCatalog.Defaults[0].FutureFor(999); throw new Exception("Unknown current crop accepted"); }
         catch (InvalidOperationException) { Console.WriteLine("PASS a built-in rotation cannot silently discard an unmatched current crop"); }
+        foreach (var p in CropPresetCatalog.Defaults)
+            for (int start = 0; start < p.Cycle.Count; start++)
+            {
+                int[] rotated = Enumerable.Range(0, p.Cycle.Count).Select(i => p.Cycle[(start + i) % p.Cycle.Count]).ToArray();
+                if (!CropPresetCatalog.MatchPatterns(rotated).Contains(p)) throw new Exception("A rotated built-in pattern was not recognized");
+            }
+        Console.WriteLine("PASS every cyclic starting point is recognized for built-in crop patterns");
+        Check(CropPresetCatalog.MatchPatterns([8, 8, 7, 7, 8, 13]).Count == 0 &&
+            CropPresetCatalog.MatchPatterns([7, 6, 7]).Count == 0 && CropPresetCatalog.MatchPatterns([]).Count == 0,
+            "crop pattern matching requires the correct order and full cycle length");
         string path = Path.Combine(directory, "crop-presets.json");
         var empty = CropPresetStore.Load(path);
         var saved = CropPresetStore.Save(path, empty, [new("Winter plan", [6, 13, 8])]);

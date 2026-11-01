@@ -14,6 +14,18 @@ public sealed record CropRotationTemplate(string Name, IReadOnlyList<int> Cycle)
 
 public static class CropPresetCatalog
 {
+    // Match a full rotation at any cyclic starting point. This compares crop
+    // order only; it does not inspect ploughing or actual field fertility.
+    public static IReadOnlyList<CropRotationTemplate> MatchPatterns(IReadOnlyList<int> rotation)
+    {
+        ArgumentNullException.ThrowIfNull(rotation);
+        if (rotation.Count == 0) return Array.Empty<CropRotationTemplate>();
+        return Array.AsReadOnly(Defaults.Where(template => template.Cycle.Count == rotation.Count &&
+            Enumerable.Range(0, rotation.Count).Any(start =>
+                Enumerable.Range(0, rotation.Count).All(i => template.Cycle[(start + i) % rotation.Count] == rotation[i])))
+            .ToArray());
+    }
+
     // Crop sequences are suggestions; the guarded field writer independently
     // checks length, current crop and supported introductions before accepting one.
     public static IReadOnlyList<CropRotationTemplate> Defaults { get; } = Array.AsReadOnly(new[]

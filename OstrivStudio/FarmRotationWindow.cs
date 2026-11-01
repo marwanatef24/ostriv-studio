@@ -19,6 +19,7 @@ public sealed class FarmRotationWindow : Window
     private readonly ComboBox _replacement = new() { MinWidth = 150, Margin = new Thickness(0, 0, 8, 0) };
     private readonly ListBox _crops = new() { MinHeight = 190, Margin = new Thickness(0, 12, 0, 12) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
+    private readonly TextBlock _pattern = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) };
     private readonly Button _apply = new() { Content = "Apply to this field…", IsEnabled = false };
     private readonly Button _applyMatching = new() { Content = "Apply future crops to compatible fields…", IsEnabled = false };
     private bool _busy;
@@ -67,6 +68,7 @@ public sealed class FarmRotationWindow : Window
         var savePreset = new Button { Content = "Save this plan…" }; savePreset.Click += (_, _) => SavePreset(); presetControls.Children.Add(savePreset);
         var deletePreset = new Button { Content = "Delete preset" }; deletePreset.Click += (_, _) => DeletePreset(); presetControls.Children.Add(deletePreset);
         top.Children.Add(presetControls);
+        top.Children.Add(_pattern);
         var bottom = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
         var earlier = new Button { Content = "Move earlier" }; earlier.Click += (_, _) => Move(-1);
         var later = new Button { Content = "Move later" }; later.Click += (_, _) => Move(1);
@@ -143,7 +145,7 @@ public sealed class FarmRotationWindow : Window
     private void RefreshDraft(int selected = 0)
     {
         var field = Selected;
-        if (field is null) { _crops.ItemsSource = null; _apply.IsEnabled = false; _applyMatching.IsEnabled = false; return; }
+        if (field is null) { _crops.ItemsSource = null; _pattern.Text = ""; _apply.IsEnabled = false; _applyMatching.IsEnabled = false; return; }
         var draft = _drafts[field.Number];
         _crops.ItemsSource = draft.Select((id, i) => new CropRow(id, i == 0 ? $"Current crop  ·  {CropName(id)}  (locked)" : $"Future {i}  ·  {CropName(id)}")).ToArray();
         _crops.SelectedIndex = Math.Clamp(selected, 0, draft.Count - 1);
@@ -151,6 +153,9 @@ public sealed class FarmRotationWindow : Window
         var matching = Matching(draft);
         _applyMatching.IsEnabled = !_busy && matching.Count > 1 && FarmCropEditor.CountChanges(_farm, matching) > 0;
         _status.Text = $"Field {field.Number} · {draft.Count} crop(s) · {matching.Count} of {_farm.Fields.Count} fields compatible. Each field keeps its current crop. Field numbers may change after a new scan.";
+        var patterns = CropPresetCatalog.MatchPatterns(draft);
+        _pattern.Text = patterns.Count == 0 ? "No built-in rotation matches this draft." :
+            $"Built-in pattern: {string.Join(", ", patterns.Select(p => p.Name))}. Ploughing and fertility are not checked.";
     }
     private Dictionary<int, IReadOnlyList<int>> Matching(IReadOnlyList<int> order)
     {

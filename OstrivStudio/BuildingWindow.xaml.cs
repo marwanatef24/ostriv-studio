@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
 using Microsoft.Win32;
 using OstrivStudio.Core;
 
@@ -27,12 +26,14 @@ public sealed record BuildingRow(string Name, int ResourceCount, BuildingCandida
     public string Badge => Category switch { "Trade" => "T", "Farm" => "F", "Storage" => "S", "Water" => "W", _ => "B" };
 }
 public sealed record LiveResourceRow(string Name, int Id, string Stored, string Reserved, string Awaited, string Other);
+public sealed record StockMixRow(string Label, double Percent);
 
 public partial class BuildingWindow : Window
 {
     private readonly string _settingsPath = Path.Combine(Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio"), "profiles.json");
     private readonly ObservableCollection<BuildingRow> _buildings = [];
     private readonly ObservableCollection<LiveResourceRow> _observations = [];
+    private readonly ObservableCollection<StockMixRow> _stockMix = [];
     private readonly Dictionary<int, string> _resourceNames = [];
     private readonly ICollectionView _buildingView;
     private ICollectionView? _resourceView;
@@ -47,8 +48,8 @@ public partial class BuildingWindow : Window
     {
         InitializeComponent();
         string version = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "preview";
-        ReleaseLabel.Text = $"Version {version} · Settlement workspace";
-        Title = $"Ostriv Studio {version} · Settlement workspace";
+        ReleaseLabel.Text = $"Resource editor · Version {version}";
+        Title = $"Ostriv Studio {version} · Resource editor";
         _buildingView = CollectionViewSource.GetDefaultView(_buildings);
         _buildingView.Filter = x => x is BuildingRow row && (BuildingCategory.SelectedIndex <= 0 || (BuildingCategory.SelectedItem as ComboBoxItem)?.Content?.ToString() == row.Category) && (string.IsNullOrWhiteSpace(BuildingSearch.Text) || row.Name.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Summary.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase)) &&
             (FilterBuildingsByResource.IsChecked != true || string.IsNullOrWhiteSpace(ResourceSearch.Text) || row.Candidate.Resources.Any(r =>
@@ -57,6 +58,7 @@ public partial class BuildingWindow : Window
         _resourceView = CollectionViewSource.GetDefaultView(_observations);
         _resourceView.Filter = x => x is LiveResourceRow row && ResourceInsights.Matches(row.Id, row.Name, ResourceSearch.Text);
         LiveResourceGrid.ItemsSource = _resourceView;
+        StockMixItems.ItemsSource = _stockMix;
         try
         {
             var definitions = JsonSerializer.Deserialize<List<ResourceDefinition>>(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "resources.json")), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? throw new InvalidDataException("The resource catalog is empty.");
@@ -91,37 +93,6 @@ public partial class BuildingWindow : Window
         if (selectedResource.HasValue) LiveResourceGrid.SelectedItem = _observations.FirstOrDefault(r => r.Id == selectedResource.Value);
         BottomStatus.Text = $"Selected {matches.Length} shown building(s) of the same type. Check each candidate before editing.";
     }
-    private void Home_Click(object sender, RoutedEventArgs e) { WorkspaceHost.Visibility = Visibility.Collapsed; HomePanel.Visibility = Visibility.Visible; }
-    private void HomeTask_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button || !int.TryParse(button.Tag?.ToString(), out int index)) return;
-        if (index == 5) { Profiles_Click(sender, e); return; }
-        WorkspaceHost.Visibility = Visibility.Visible; HomePanel.Visibility = Visibility.Collapsed;
-        OpenWorkspace(index);
-    }
-    private void Workspace_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button button && int.TryParse(button.Tag?.ToString(), out int index) &&
-            index >= 0 && index < WorkspacePanels.Children.Count && WorkspacePanels.Children[index].Visibility != Visibility.Visible)
-            OpenWorkspace(index);
-    }
-    private void OpenWorkspace(int index)
-    {
-        BuildingCategory.SelectedIndex = 0;
-        FilterBuildingsByResource.IsChecked = false;
-        ResourceSearch.Text = "";
-        BuildingSearch.Text = index switch { 2 => "grain farm", 3 => "trading", 4 => "rowhouse shop", _ => "" };
-        SelectWorkspace(index);
-        if (BuildingGrid.SelectedItems.Count == 0 && BuildingGrid.Items.Count > 0) BuildingGrid.SelectedIndex = 0;
-    }
-    private void SelectWorkspace(int index)
-    {
-        for (int i = 0; i < WorkspacePanels.Children.Count; i++)
-            WorkspacePanels.Children[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
-        foreach (var button in WorkspaceNavigation.Children.OfType<Button>())
-            button.Background = button.Tag?.ToString() == index.ToString(CultureInfo.InvariantCulture)
-                ? new SolidColorBrush(Color.FromRgb(40, 66, 94)) : Brushes.Transparent;
-    }
     private void MarketResource_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: string resource }) return;
@@ -134,7 +105,6 @@ public partial class BuildingWindow : Window
                 ?? _buildingView.Cast<BuildingRow>().FirstOrDefault();
         }
         ResourceSearch.Text = resource;
-        SelectWorkspace(0);
         LiveResourceGrid.SelectedItem = LiveResourceGrid.Items.OfType<LiveResourceRow>()
             .FirstOrDefault(r => r.Name.Equals(resource, StringComparison.OrdinalIgnoreCase));
         BottomStatus.Text = BuildingGrid.SelectedItems.Count == 0
@@ -297,6 +267,8 @@ public partial class BuildingWindow : Window
         if (SelectionSummary is not null) SelectionSummary.Text = selectionCount == 0 ? "No buildings selected" : $"{selectionCount} building{(selectionCount == 1 ? "" : "s")} selected";
         if (SelectSameTypeButton is not null) SelectSameTypeButton.IsEnabled = selectionCount > 0;
         _observations.Clear();
+        _stockMix.Clear();
+        if (StockMixPanel is not null) StockMixPanel.Visibility = Visibility.Collapsed;
         if (BuildingGrid.SelectedItem is not BuildingRow row) { SelectedTitle.Text = "Choose a building"; SelectedSubtitle.Text = "Its stock and available controls will appear here."; UpdateActions(); return; }
         int selectedCount = BuildingGrid.SelectedItems.Count;
         SelectedTitle.Text = selectedCount > 1 ? $"{selectedCount} buildings selected" : row.Name;
@@ -304,7 +276,17 @@ public partial class BuildingWindow : Window
             $"{row.Candidate.Resources.Count} records in this snapshot. Instance numbers may change after a scan." +
             (row.Candidate.ObservedCapacity is float capacity ? $" Observed capacity: {capacity:N0} (check in game)." : "");
         static string FormatAmount(double value) => value.ToString("0.##", CultureInfo.CurrentCulture);
-        foreach (var total in BuildingDiscovery.Summarize(row.Candidate.Resources).OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
+        var totals = BuildingDiscovery.Summarize(row.Candidate.Resources).ToArray();
+        var positive = totals.Where(x => double.IsFinite(x.Stored) && x.Stored > 0).OrderByDescending(x => x.Stored).ToArray();
+        double stockTotal = positive.Sum(x => x.Stored);
+        if (StockMixPanel is not null && StockMixTitle is not null && stockTotal > 0 && double.IsFinite(stockTotal))
+        {
+            foreach (var stock in positive.Take(3))
+                _stockMix.Add(new($"{_resourceNames.GetValueOrDefault(stock.Id, $"Unknown resource {stock.Id}")} · {FormatAmount(stock.Stored)}", 100 * stock.Stored / stockTotal));
+            StockMixTitle.Text = $"Stock mix · {row.Name} · share of observed stock";
+            StockMixPanel.Visibility = Visibility.Visible;
+        }
+        foreach (var total in totals.OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
             _observations.Add(new(_resourceNames.GetValueOrDefault(total.Id, $"Unknown resource {total.Id}"), total.Id,
                 FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other)));
         if (previousResource.HasValue) LiveResourceGrid.SelectedItem = _observations.FirstOrDefault(r => r.Id == previousResource.Value);

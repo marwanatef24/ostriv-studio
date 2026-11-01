@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.6 — original-inspired resource workspace
+
+- Open directly to a single workspace with building search, stock, one-time and saved actions, and building-specific tools together.
+- Select all displayed buildings or all displayed instances of the same type; see a stock mix for the selected building and open the resource overview from the toolbar.
+- Identify built-in crop rotation patterns at any starting point. Pattern matching checks crop order only, not ploughing or fertility.
+- Direct deal editing, additional market goods and other unsupported building controls remain unavailable. See [feature coverage](FEATURE-COVERAGE.md).
+
 ## 0.2.5 — clearer bulk controls and shop inspection
 
 - Simplified the building selection controls and explained the difference between adding once and saving a minimum rule.
