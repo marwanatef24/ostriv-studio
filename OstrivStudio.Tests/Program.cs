@@ -25,6 +25,7 @@ CapacityEditorTests.Run();
 ManualStockEditorTests.Run();
 await CapacityRulePlannerTests.Run();
 TradingStockLimitsTests.Run();
+RetailAssignmentsTests.Run();
 TradeAllocationPlannerTests.Run();
 FarmCropEditorTests.Run();
 CropPlanGeneratorTests.Run();

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.5 — clearer bulk controls and shop inspection
+
+- Simplified the building selection controls and explained the difference between adding once and saving a minimum rule.
+- View assigned goods and empty slots for selected rowhouse shops on the tested build. The list is read-only and shows stored and reserved amounts from the last scan.
+- Added one-time additions and saved minimums for existing buckwheat records in rowhouse shops, up to 100. One addition and an each-building rule were tested in a backed-up settlement; missing records are skipped.
+- Strengthened bulk export allocation checks so all selected deals must match one guarded capture before writes begin. The capture is not an atomic snapshot.
+- Direct deal editing, creating missing shop records, other retail goods and many building features remain unverified and unavailable. See [feature coverage](FEATURE-COVERAGE.md).
+
 ## 0.2.4 — task home and shop rules
 
 - Added a task-based home screen for resources, farms, trading, markets, capacity and saved rules.

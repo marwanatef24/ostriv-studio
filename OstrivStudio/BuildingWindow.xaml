@@ -29,6 +29,31 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="ActionChoice" TargetType="RadioButton">
+      <Setter Property="Background" Value="#F5F7FA" />
+      <Setter Property="BorderBrush" Value="#D6E0E7" />
+      <Setter Property="Foreground" Value="#233D37" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="AutomationProperties.HelpText" Value="{Binding Tag, RelativeSource={RelativeSource Self}}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Card" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,11">
+              <StackPanel>
+                <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" FontSize="15" FontWeight="SemiBold" />
+                <TextBlock Text="{TemplateBinding Tag}" Foreground="#52665B" FontSize="12" Margin="0,5,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#659A85" /></Trigger>
+              <Trigger Property="IsChecked" Value="True"><Setter TargetName="Card" Property="Background" Value="#E5F2E9" /><Setter TargetName="Card" Property="BorderBrush" Value="#267358" /><Setter TargetName="Card" Property="BorderThickness" Value="2" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="#246BFD" /><Setter TargetName="Card" Property="BorderThickness" Value="2" /></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Card" Property="Opacity" Value="0.5" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     <Style x:Key="PanelGrid" TargetType="DataGrid">
       <Setter Property="Background" Value="#1D2F4D" />
       <Setter Property="Foreground" Value="#EDF3EF" />
@@ -151,10 +176,12 @@
             <CheckBox x:Name="FilterBuildingsByResource" Content="Match the resource search" Foreground="#C4D4E8" Margin="0,12,0,12" Checked="BuildingResourceFilter_Changed" Unchecked="BuildingResourceFilter_Changed" />
             </StackPanel>
             </Expander>
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-              <Button Content="Select all shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
-              <Button Content="Clear" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="12,8" />
-            </StackPanel>
+            <TextBlock x:Name="SelectionSummary" Text="No buildings selected" Foreground="#D6E5F6" FontSize="12" Margin="0,0,0,8" />
+            <WrapPanel Margin="0,0,0,14">
+              <Button Content="All shown" ToolTip="Select all buildings currently shown" Click="SelectShown_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,6,6" />
+              <Button x:Name="SelectSameTypeButton" Content="Same type" ToolTip="Select shown buildings of the selected type" Click="SelectSameType_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,6,6" IsEnabled="False" />
+              <Button Content="Clear" Click="ClearSelection_Click" Style="{StaticResource WorkButton}" Background="#2B4260" Foreground="White" BorderThickness="0" Padding="10,8" Margin="0,0,0,6" />
+            </WrapPanel>
           </StackPanel>
         <DataGrid Grid.Row="1" x:Name="BuildingGrid" Style="{StaticResource PanelGrid}" CellStyle="{StaticResource PanelCell}" Background="#1B3048" RowBackground="#1B3048" AlternatingRowBackground="#243C57" HeadersVisibility="None" AutoGenerateColumns="False" SelectionMode="Extended" SelectionUnit="FullRow" SelectionChanged="Building_Changed" RowHeight="88">
             <DataGrid.Columns>
@@ -251,8 +278,8 @@
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border Background="#F1F5FC" CornerRadius="8" Padding="14,12" Margin="0,0,8,0"><RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" IsChecked="True" Checked="ActionIntent_Changed" Foreground="#213D65" FontSize="15" FontWeight="SemiBold" /></Border>
-                    <Border Grid.Column="1" Background="#EAF5F0" CornerRadius="8" Padding="14,12" Margin="8,0,0,0"><RadioButton x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Checked="ActionIntent_Changed" Foreground="#176554" FontSize="15" FontWeight="SemiBold" /></Border>
+                    <RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" Tag="Make one change to the selected buildings." Style="{StaticResource ActionChoice}" IsChecked="True" Checked="ActionIntent_Changed" Margin="0,0,8,0" />
+                    <RadioButton Grid.Column="1" x:Name="HoldIntent" GroupName="ResourceAction" Content="Keep stocked" Tag="Save a minimum for every building of this type." Style="{StaticResource ActionChoice}" Checked="ActionIntent_Changed" Margin="8,0,0,0" />
                   </Grid>
                   <TextBlock x:Name="ActionHint" Text="Choose stock above, then review a one-time addition or a saved minimum." Foreground="#56667D" TextWrapping="Wrap" Margin="0,10,0,15" />
                   <Button x:Name="ReviewActionButton" Content="Review addition…" Click="ReviewAction_Click" Style="{StaticResource WorkButton}" Background="#246BFD" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" IsEnabled="False" />
@@ -316,8 +343,14 @@
               <TextBlock Text="MARKET SHELVES" Foreground="#8665A6" FontSize="11" FontWeight="Bold" />
               <TextBlock Text="Keep shops supplied" FontSize="27" FontWeight="SemiBold" Margin="0,8,0,0" />
               <TextBlock x:Name="MarketSelectionSummary" Text="Select a rowhouse shop, then choose an existing item below." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,22" />
+              <Border Background="#F4F0F8" CornerRadius="12" Padding="18" Margin="0,0,0,20"><StackPanel>
+                <TextBlock Text="See what your shops sell" FontWeight="SemiBold" FontSize="16" />
+                <TextBlock Text="Select one or more rowhouse shops to see their assigned goods and empty slots." Foreground="#665771" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <Button Content="View assigned goods…" Click="RetailAssignments_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
+              </StackPanel></Border>
               <TextBlock Text="CHOOSE AN ITEM" FontSize="11" FontWeight="Bold" Foreground="#6B5A7C" />
               <WrapPanel Margin="0,12,0,20">
+                <Button Content="Buckwheat  →" Tag="Buckwheat" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
                 <Button Content="Clothes  →" Tag="Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
                 <Button Content="Shoes  →" Tag="Shoes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
                 <Button Content="Warm clothes  →" Tag="Warm Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
@@ -329,7 +362,7 @@
               </StackPanel></Border>
               <Border BorderBrush="#DED5E9" BorderThickness="1" CornerRadius="10" Padding="18"><StackPanel>
                 <TextBlock Text="What can be edited?" FontWeight="SemiBold" FontSize="16" />
-                <TextBlock Text="Existing clothes, shoes and warm clothes in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <TextBlock Text="Existing buckwheat, clothes, shoes and warm clothes in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
                 <Button Content="Find rowhouse shops" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
               </StackPanel></Border>
             </StackPanel></ScrollViewer>

@@ -44,6 +44,7 @@ public static class TradeDealReader
         if (count is < 0 or > 128) throw new InvalidOperationException("The trade list contains an unsupported number of entries.");
         byte[] items = count == 0 ? [] : Read(memory, pointer, count * 8);
         var deals = new List<TradeDeal>();
+        var observed = new List<(ulong Item, ulong Deal, byte[] ItemHeader, byte[] Data)>();
         for (int i = 0; i < count; i++)
         {
             ulong item = BinaryPrimitives.ReadUInt64LittleEndian(items.AsSpan(i * 8));
@@ -63,19 +64,44 @@ public static class TradeDealReader
                 !data.AsSpan(0, 16).SequenceEqual(dataCheck.AsSpan(0, 16)) || !data.AsSpan(48, 8).SequenceEqual(dataCheck.AsSpan(48, 8)))
                 throw new InvalidOperationException("A trade deal changed while reading; refresh it.");
             deals.Add(new(city, resource, flags, dealId, total, completed));
+            observed.Add((item, dealPointer, itemHeader, data));
         }
-        byte[] after = Read(memory, list.Address, PointerOffset + 8);
-        if (!header.AsSpan(0, 8).SequenceEqual(after.AsSpan(0, 8)) ||
-            !header.AsSpan(CountOffset, 4).SequenceEqual(after.AsSpan(CountOffset, 4)) ||
-            !header.AsSpan(PointerOffset, 8).SequenceEqual(after.AsSpan(PointerOffset, 8)) ||
-            (count != 0 && !items.AsSpan().SequenceEqual(Read(memory, pointer, items.Length))))
-            throw new InvalidOperationException("The selected city's trade list changed; refresh it.");
+        void RequireSameList()
+        {
+            byte[] after = Read(memory, list.Address, PointerOffset + 8);
+            if (!header.AsSpan(0, 8).SequenceEqual(after.AsSpan(0, 8)) ||
+                !header.AsSpan(CountOffset, 4).SequenceEqual(after.AsSpan(CountOffset, 4)) ||
+                !header.AsSpan(PointerOffset, 8).SequenceEqual(after.AsSpan(PointerOffset, 8)) ||
+                (count != 0 && !items.AsSpan().SequenceEqual(Read(memory, pointer, items.Length))))
+                throw new InvalidOperationException("The selected city's trade list changed; refresh it.");
+        }
+        RequireSameList();
+        // Recheck earlier rows after all rows have been read. A deal can change
+        // after its first local recheck while another row is being inspected.
+        foreach (var row in observed)
+        {
+            byte[] itemCheck = Read(memory, row.Item, ItemDealPointer + 8), dataCheck = Read(memory, row.Deal, 56);
+            if (!row.ItemHeader.AsSpan(0, 8).SequenceEqual(itemCheck.AsSpan(0, 8)) ||
+                !row.ItemHeader.AsSpan(ItemDealPointer, 8).SequenceEqual(itemCheck.AsSpan(ItemDealPointer, 8)) ||
+                !row.Data.AsSpan(0, 16).SequenceEqual(dataCheck.AsSpan(0, 16)) ||
+                !row.Data.AsSpan(48, 8).SequenceEqual(dataCheck.AsSpan(48, 8)))
+                throw new InvalidOperationException("A trade deal changed during the list review; refresh it.");
+        }
+        RequireSameList();
         return deals.AsReadOnly();
     }
     public static void RequireUnchanged(DiscoveryResult scan, FishBulkEditor.IMemory memory, TradeDeal reviewed)
+        => RequireAllUnchanged(scan, memory, [reviewed]);
+
+    // All selected deals must exist together in one stable capture. Separate
+    // captures can each match a different city or state of a changing list.
+    public static void RequireAllUnchanged(DiscoveryResult scan, FishBulkEditor.IMemory memory, IReadOnlyList<TradeDeal> reviewed)
     {
-        if (Capture(scan, memory).Count(d => d == reviewed) != 1)
-            throw new InvalidOperationException("The selected trade deal changed or is no longer visible. Refresh the deal before editing.");
+        if (reviewed.Count is < 1 or > 128 || reviewed.Distinct().Count() != reviewed.Count)
+            throw new InvalidOperationException("Select distinct trade deals before editing.");
+        var visible = Capture(scan, memory);
+        if (reviewed.Any(deal => visible.Count(current => current == deal) != 1))
+            throw new InvalidOperationException("A selected trade deal changed, is ambiguous, or is no longer visible. Refresh the deals before editing.");
     }
     private sealed class ReadOnlyMemory : FishBulkEditor.IMemory, IDisposable
     {

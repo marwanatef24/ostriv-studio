@@ -189,7 +189,7 @@ public static class TradingStockLimits
         try
         {
             cancellation.ThrowIfCancellationRequested(); pause.EnsurePaused();
-            foreach (var deal in deals) TradeDealReader.RequireUnchanged(reviewed.Scan, memory, deal);
+            TradeDealReader.RequireAllUnchanged(reviewed.Scan, memory, deals);
             applied = ApplyAllocationsChecked(reviewed, plan, new GuardedMemory(memory, pause));
             pause.Resume(); return applied;
         }
