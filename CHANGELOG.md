@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — task workspace preview
+
+- Added workspace navigation and separate capacity, farm, trade and market layouts, including shortcuts to supported shop goods.
+- Choose individual compatible export deals for a bulk allocation, rather than always allocating every visible export. The existing review, backup and guarded write checks remain in place.
+- This remains an experimental partial editor. The new selection flow has automated and desktop-preview checks, but was not retested against a running game for this release. Missing market goods, direct deal editing and many building features are still unsupported; see [feature coverage](FEATURE-COVERAGE.md).
+
 ## 0.2.0 — redesigned experimental preview
 
 - Rebuilt the main workflow: searchable building browser, dedicated inspector, and Resources, Building, Farms, Trading and Markets tabs.
