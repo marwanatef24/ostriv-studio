@@ -18,7 +18,7 @@ public sealed class FarmRotationWindow : Window
     private readonly ListBox _crops = new() { MinHeight = 190, Margin = new Thickness(0, 12, 0, 12) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) };
     private readonly Button _apply = new() { Content = "Apply to this field…", IsEnabled = false };
-    private readonly Button _applyMatching = new() { Content = "Apply to matching fields…", IsEnabled = false };
+    private readonly Button _applyMatching = new() { Content = "Apply future crops to compatible fields…", IsEnabled = false };
     private bool _busy;
     private static string CropName(int id) => id switch
     {
@@ -29,7 +29,7 @@ public sealed class FarmRotationWindow : Window
     {
         _farm = farm; _invalidate = invalidate;
         _drafts = farm.Fields.ToDictionary(f => f.Number, f => f.Crops.ToList());
-        Title = "Farm rotations"; Width = 760; Height = 620; MinWidth = 620; MinHeight = 500;
+        Title = "Farm rotations"; Width = 980; Height = 700; MinWidth = 760; MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = new SolidColorBrush(Color.FromRgb(20, 40, 51)); Foreground = new SolidColorBrush(Color.FromRgb(240, 238, 230));
         _crops.Background = new SolidColorBrush(Color.FromRgb(28, 49, 59));
@@ -43,7 +43,7 @@ public sealed class FarmRotationWindow : Window
         var root = new DockPanel { Margin = new Thickness(26) };
         var top = new StackPanel(); DockPanel.SetDock(top, Dock.Top); root.Children.Add(top);
         top.Children.Add(new TextBlock { Text = "Farm rotations", FontFamily = new FontFamily("Georgia"), FontSize = 28 });
-        top.Children.Add(new TextBlock { Text = "Choose a field to reorder its future crops or replace one with wheat, buckwheat, potato or fallow. The current crop stays locked.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
+        top.Children.Add(new TextBlock { Text = "Choose a field, then arrange its future crops. Apply the plan to this field or to all compatible fields; every field keeps its current crop.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 16), Foreground = Brushes.LightGray });
         _fields.ItemsSource = farm.Fields.Select(f => $"Field {f.Number}").ToArray();
         _fields.SelectionChanged += (_, _) => RefreshDraft(); top.Children.Add(_fields); top.Children.Add(_status);
         _replacement.ItemsSource = new[] { new CropRow(6, "Wheat"), new CropRow(7, "Buckwheat"), new CropRow(8, "Potato"), new CropRow(13, "Fallow") };
@@ -54,7 +54,7 @@ public sealed class FarmRotationWindow : Window
         replaceControls.Children.Add(replace);
         var plough = new Button { Content = "Field ploughing…" }; plough.Click += Plough_Click; replaceControls.Children.Add(plough);
         top.Children.Add(replaceControls);
-        var bottom = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var bottom = new WrapPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 8, 0, 0) };
         var earlier = new Button { Content = "Move earlier" }; earlier.Click += (_, _) => Move(-1);
         var later = new Button { Content = "Move later" }; later.Click += (_, _) => Move(1);
         var reset = new Button { Content = "Reset field" }; reset.Click += (_, _) => Reset();
@@ -75,18 +75,11 @@ public sealed class FarmRotationWindow : Window
         _apply.IsEnabled = !_busy && FarmCropEditor.Changed(field, draft);
         var matching = Matching(draft);
         _applyMatching.IsEnabled = !_busy && matching.Count > 1 && FarmCropEditor.CountChanges(_farm, matching) > 0;
-        _status.Text = $"Field {field.Number} · {draft.Count} crop(s) · {matching.Count} matching field(s). Field numbers may change after a new scan.";
+        _status.Text = $"Field {field.Number} · {draft.Count} crop(s) · {matching.Count} of {_farm.Fields.Count} fields compatible. Each field keeps its current crop. Field numbers may change after a new scan.";
     }
     private Dictionary<int, IReadOnlyList<int>> Matching(IReadOnlyList<int> order)
     {
-        var result = new Dictionary<int, IReadOnlyList<int>>();
-        if (Selected is not FarmFieldSnapshot selected) return result;
-        foreach (var field in _farm.Fields)
-        {
-            if (field.Crops.Count == order.Count && field.Crops[0] == order[0] && field.Crops.Order().SequenceEqual(selected.Crops.Order()))
-                result.Add(field.Number, order.ToArray());
-        }
-        return result;
+        return FarmCropEditor.CompatibleFutureRotations(_farm, order);
     }
     private void Replace()
     {
@@ -143,9 +136,9 @@ public sealed class FarmRotationWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         { MessageBox.Show(this, "Backup failed; no crop rotation was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string order = string.Join(" → ", desired.Select(CropName));
+        string order = string.Join(" → ", desired.Skip(1).Select(CropName));
         string fieldNames = string.Join(", ", changes.Keys.Order().Select(n => $"{n}"));
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save and do fields {fieldNames} match the intended fields? The game will briefly pause while applying this order to them:\n\n{order}\n\nOther unsaved field drafts are not applied. Avoid changing game speed during the edit. If it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
+        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save and do fields {fieldNames} match the intended fields? The game will briefly pause while applying these future crops:\n\n{order}\n\nEach field keeps its current crop. Other unsaved field drafts are not applied. Avoid changing game speed during the edit. If it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
         if (MessageBox.Show(this, question, "Apply crop rotation?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         _busy = true; _apply.IsEnabled = false; _applyMatching.IsEnabled = false; _fields.IsEnabled = false; _status.Text = "Applying the crop rotation…";
         try

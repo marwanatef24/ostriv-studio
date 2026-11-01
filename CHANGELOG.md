@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4 — experimental preview
+
+- Apply a field's future crop plan across compatible fields with different current crops and rotations; each current crop remains unchanged.
+- Clarified rule scopes in the saved-rules screen and improved the farm rotation controls.
+
 ## 0.1.3 — experimental preview
 
 - Added a building-group filter and clearer category labels in building results.

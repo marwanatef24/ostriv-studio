@@ -66,6 +66,20 @@ internal static class FarmCropEditorTests
         Check(FarmCropEditor.ApplyBatchChecked(reviewed, batch, memory) == 2 && memory.Writes == 2 &&
             FarmCropEditor.Capture(scan, farm, memory).Fields.All(f => f.Crops.SequenceEqual([7, 13, 8, 8])),
             "farm batch applies a reviewed rotation to both matching fields");
+        (scan, farm, memory) = Fixture();
+        memory.Put(0x70000, new byte[] { 6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0 });
+        reviewed = FarmCropEditor.Capture(scan, farm, memory);
+        var compatible = FarmCropEditor.CompatibleFutureRotations(reviewed, [7, 13, 8, 8]);
+        Check(compatible.Count == 2 && compatible[2].SequenceEqual([6, 13, 8, 8]) &&
+            FarmCropEditor.ApplyBatchChecked(reviewed, compatible, memory) == 2 &&
+            FarmCropEditor.Capture(scan, farm, memory).Fields[1].Crops.SequenceEqual([6, 13, 8, 8]),
+            "bulk future rotation supports different crop mixes and preserves each field's current crop");
+        (scan, farm, memory) = Fixture();
+        memory.Put(0x70000, new byte[] { 6, 0, 0, 0, 9, 0, 0, 0, 9, 0, 0, 0, 9, 0, 0, 0 });
+        reviewed = FarmCropEditor.Capture(scan, farm, memory);
+        compatible = FarmCropEditor.CompatibleFutureRotations(reviewed, [6, 9, 9, 9]);
+        Check(compatible.Count == 1 && compatible.ContainsKey(2) && memory.Writes == 0,
+            "bulk future rotation skips fields requiring unverified crop introductions");
         (scan, farm, memory) = Fixture(); reviewed = FarmCropEditor.Capture(scan, farm, memory);
         batch[2] = new[] { 8, 7, 13, 8 };
         try { FarmCropEditor.ApplyBatchChecked(reviewed, batch, memory); throw new Exception("Invalid second field accepted"); }

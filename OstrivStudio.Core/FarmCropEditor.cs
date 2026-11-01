@@ -93,6 +93,21 @@ public static class FarmCropEditor
             throw new InvalidOperationException("Keep the current crop and field length. New future crops are limited to wheat, buckwheat, potato and fallow.");
         return !desired.SequenceEqual(field.Crops);
     }
+    // Copy future crops to fields where the existing guarded writer accepts them.
+    // Each field retains its own current crop and original rotation length.
+    public static Dictionary<int, IReadOnlyList<int>> CompatibleFutureRotations(FarmRotationSnapshot farm, IReadOnlyList<int> template)
+    {
+        if (template.Count is < 1 or > 6) throw new InvalidOperationException("The rotation template is invalid.");
+        var result = new Dictionary<int, IReadOnlyList<int>>();
+        foreach (var field in farm.Fields)
+        {
+            if (field.Crops.Count != template.Count || field.Crops.Count == 0) continue;
+            int[] desired = [field.Crops[0], .. template.Skip(1)];
+            try { _ = Changed(field, desired); result.Add(field.Number, desired); }
+            catch (InvalidOperationException) { /* Unsupported crop introductions are skipped. */ }
+        }
+        return result;
+    }
     public static void ApplyChecked(FarmRotationSnapshot reviewed, int fieldNumber, IReadOnlyList<int> desired, FishBulkEditor.IMemory memory)
     {
         _ = ApplyBatchChecked(reviewed, new Dictionary<int, IReadOnlyList<int>> { [fieldNumber] = desired }, memory);
