@@ -46,5 +46,55 @@ internal static class ManualStockEditorTests
         (scan, buildings, memory) = Fixture(); memory.FailOnWrite = 2;
         try { ManualStockEditor.ApplyChecked(scan, buildings, 33, 5, memory); throw new Exception("Uncertain write ignored"); }
         catch (PartialGameWriteException) when (memory.Writes == 2) { Console.WriteLine("PASS an uncertain one-time addition requires backup recovery"); }
+
+        (scan, buildings, memory) = Fixture();
+        if (ManualStockEditor.ApplyRaiseToChecked(scan, buildings, 33, 100, memory) != 2 ||
+            BitConverter.ToSingle(memory.Read(0x30004, 4)) != 100 || BitConverter.ToSingle(memory.Read(0x40004, 4)) != 100)
+            throw new Exception("Raise-to did not calculate an independent target for each building");
+        Console.WriteLine("PASS raise-to brings two existing quantities to the same target");
+
+        (scan, buildings, memory) = Fixture();
+        if (ManualStockEditor.ApplyRaiseToChecked(scan, buildings, 33, 70, memory) != 1 || memory.Writes != 1 ||
+            BitConverter.ToSingle(memory.Read(0x30004, 4)) != 70 || BitConverter.ToSingle(memory.Read(0x40004, 4)) != 80)
+            throw new Exception("Raise-to changed a building already above its target");
+        Console.WriteLine("PASS raise-to leaves a building above target unchanged");
+
+        (scan, buildings, memory) = Fixture();
+        if (ManualStockEditor.ApplyRaiseToChecked(scan, buildings, 33, 50, memory) != 0 || memory.Writes != 0)
+            throw new Exception("Already satisfied raise-to wrote to memory");
+        Console.WriteLine("PASS an already satisfied raise-to makes no memory write");
+
+        (scan, buildings, memory) = Fixture(); memory.Put(0x40004, BitConverter.GetBytes(81f));
+        try { ManualStockEditor.ApplyRaiseToChecked(scan, buildings, 33, 100, memory); throw new Exception("Stale raise-to quantity accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS stale stock blocks raise-to before any write"); }
+
+        (scan, buildings, memory) = Fixture();
+        var split = buildings[0] with { ResourceCount = 3, Resources = [new(0, 33, 30, 0, 0, 0), new(1, 33, 20, 0, 0, 0), new(2, 33, 10, 1, 0, 0)] };
+        var splitScan = scan with { Buildings = [split, buildings[1]] };
+        var splitPlan = ManualStockEditor.PrepareRaiseTo(splitScan, [split], 33, 80);
+        if (splitPlan.Entries is not [{ Target: 60 }] || splitPlan.Entries[0].Record.Index != 0)
+            throw new Exception("Raise-to did not preserve the other stored and reserved records");
+        Console.WriteLine("PASS raise-to uses the combined stored total and leaves other records alone");
+
+        var camp = new BuildingCandidate("building_camp_storage", 0x10000, 0x9000, 0x30000, 1, [new(0, 33, 50, 0, 0, 0)], "sample");
+        var campScan = scan with { Buildings = [camp] };
+        try { ManualStockEditor.PrepareRaiseTo(campScan, [camp], 33, 500); throw new Exception("Unanchored camp raise-to accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS raise-to retains the camp storage anchor guard"); }
+
+        (scan, buildings, memory) = Fixture();
+        try { ManualStockEditor.PrepareRaiseTo(scan, buildings, 87, 100); throw new Exception("Raise-to accepted a missing record"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS raise-to does not insert an unverified resource record"); }
+
+        (scan, buildings, memory) = Fixture();
+        try { ManualStockEditor.PrepareRaiseTo(scan with { GameSha256 = "unverified" }, buildings, 33, 100); throw new Exception("Unsupported build accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS raise-to rejects an unverified game executable"); }
+        try { ManualStockEditor.PrepareRaiseTo(scan with { UiCandidates = [new("uiDealList", 0x30004, 0x9999)] }, buildings, 33, 100); throw new Exception("Overlapping UI accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS raise-to rejects a resource array overlapping an observed UI object"); }
+        try { ManualStockEditor.PrepareRaiseTo(scan, buildings, 33, 100_000_001); throw new Exception("Inexact target accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS raise-to rejects targets the game cannot represent exactly"); }
+
+        (scan, buildings, memory) = Fixture(); memory.FailOnWrite = 2;
+        try { ManualStockEditor.ApplyRaiseToChecked(scan, buildings, 33, 100, memory); throw new Exception("Uncertain raise-to write ignored"); }
+        catch (PartialGameWriteException) when (memory.Writes == 2) { Console.WriteLine("PASS an uncertain raise-to requires backup recovery"); }
     }
 }

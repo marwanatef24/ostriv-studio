@@ -34,6 +34,7 @@ internal static class ExistingRuleExecutorTests
             BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(408), b.ResourceCount);
             BinaryPrimitives.WriteUInt64LittleEndian(header.AsSpan(416), b.ResourcePointer);
             BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(424), 64); memory.Put(b.Address, header);
+            memory.Put(b.ResourcePointer, new byte[64 * 20]);
             foreach (var r in b.Resources)
             {
                 var record = new byte[20]; BinaryPrimitives.WriteInt32LittleEndian(record, r.Id);
@@ -108,9 +109,47 @@ internal static class ExistingRuleExecutorTests
         profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=6, BuildingType="building_camp_storage", Target=1, Enabled=true });
         profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=18, BuildingType="building_camp_storage", Target=1, Enabled=true });
         result = ExistingRuleExecutor.ApplyCheckedDetailed(profile, scan, memory);
-        Check(result.Applied == 5 && result.Plan!.Skipped.Any(s => s.Contains("only one new record")) &&
-            BitConverter.ToInt32(memory.Read(0x1000 + 408, 4)) == 4 && BitConverter.ToInt32(memory.Read(0x503c, 4)) == 6,
-            "multiple missing resources in one building are queued one per cycle");
+        Check(result.Applied == 6 && result.Plan!.Skipped.Count == 0 &&
+            BitConverter.ToInt32(memory.Read(0x1000 + 408, 4)) == 5 && BitConverter.ToInt32(memory.Read(0x503c, 4)) == 6 &&
+            BitConverter.ToInt32(memory.Read(0x5050, 4)) == 18 && BitConverter.ToSingle(memory.Read(0x5054, 4)) == 1,
+            "multiple missing resources are initialized and published in one cycle");
+        (profile, scan, memory) = Fixture();
+        var fullCamp = scan.Buildings[0];
+        var extraRecords = Enumerable.Range(3, 60).Select(i => new ResourceObservation(i, 1000 + i, 0, 0, 0, 0)).ToArray();
+        fullCamp = fullCamp with { ResourceCount = 63, Resources = fullCamp.Resources.Concat(extraRecords).ToArray() };
+        scan = scan with { Buildings = [fullCamp, scan.Buildings[1], scan.Buildings[2]] };
+        memory.Put(0x1000 + 408, BitConverter.GetBytes(63));
+        foreach (var r in extraRecords)
+        {
+            var encoded = new byte[20]; BinaryPrimitives.WriteInt32LittleEndian(encoded, r.Id);
+            memory.Put(0x5000 + (ulong)r.Index * 20, encoded);
+        }
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=6, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=18, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        result = ExistingRuleExecutor.ApplyCheckedDetailed(profile, scan, memory);
+        Check(result.Applied == 5 && result.Plan!.Skipped.Any(s => s.Contains("no verified spare")) &&
+            BitConverter.ToInt32(memory.Read(0x1000 + 408, 4)) == 64 && BitConverter.ToInt32(memory.Read(0x5000 + 63 * 20, 4)) == 6,
+            "only available allocated slots are used and remaining insertions are skipped");
+        (profile, scan, memory) = Fixture();
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=6, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=18, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        var overlap = scan.Buildings[1] with { Address = 0x4000, ResourcePointer = 0x5050 };
+        scan = scan with { Buildings = scan.Buildings.Append(overlap).ToArray() };
+        try { ExistingRuleExecutor.ApplyChecked(profile, scan, memory); throw new Exception("Overlapping second insertion accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS overlap with a later insertion slot stops the batch before writes"); }
+        (profile, scan, memory) = Fixture();
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=6, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=18, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        scan = scan with { UiCandidates = [new("uiDealList", 0x5050, 0x9999)] };
+        try { ExistingRuleExecutor.ApplyChecked(profile, scan, memory); throw new Exception("UI overlap with insertion accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS overlap with a UI candidate stops the batch before writes"); }
+        (profile, scan, memory) = Fixture();
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=6, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        profile.AutomationProfiles[profile.SelectedProfile].MaintenanceRules.Add(new() { ResourceId=18, BuildingType="building_camp_storage", Target=1, Enabled=true });
+        memory.FailOnWrite = 8;
+        try { ExistingRuleExecutor.ApplyChecked(profile, scan, memory); throw new Exception("Uncertain second insertion ignored"); }
+        catch (PartialGameWriteException) when (memory.Writes == 8 && BitConverter.ToInt32(memory.Read(0x1000 + 408, 4)) == 4)
+        { Console.WriteLine("PASS an uncertain later insertion leaves its count unpublished and requires backup recovery"); }
         (profile, scan, memory) = Fixture(); memory.Put(0x6004, BitConverter.GetBytes(1543f));
         try { ExistingRuleExecutor.ApplyChecked(profile, scan, memory); throw new Exception("Stale target accepted"); }
         catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS a stale building stops the whole existing-record batch before writes"); }

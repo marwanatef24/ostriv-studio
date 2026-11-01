@@ -172,20 +172,29 @@ public partial class BuildingWindow : Window
     }
     private void UpdateActions()
     {
-        if (ReviewActionButton is null || BuildingGrid is null || LiveResourceGrid is null || ActionAmount is null || AmountLabel is null) return;
+        if (ReviewActionButton is null || BuildingGrid is null || LiveResourceGrid is null || ActionAmount is null || AmountLabel is null || RaiseIntent is null) return;
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         var resource = LiveResourceGrid.SelectedItem as LiveResourceRow;
         bool hold = HoldIntent.IsChecked == true;
+        bool raise = RaiseIntent.IsChecked == true;
         ActionResource.Text = resource is null ? "Select a resource above" : $"{resource.Name} · {selected.Length} selected building(s)";
-        ReviewActionButton.Content = hold ? "Save rule" : "Review addition…";
-        AmountLabel.Text = hold ? "Minimum quantity per building" : "Amount to add to each selected building";
+        ReviewActionButton.Content = hold ? "Save rule" : raise ? "Review target…" : "Review addition…";
+        AmountLabel.Text = hold ? "Minimum quantity per building" : raise ? "Raise each building to at least" : "Amount to add to each selected building";
         bool supported = resource is not null && selected.Length > 0 && selected.All(b => ExistingRuleExecutor.SupportsExisting(b.Candidate.ClassName, resource.Id));
         ReviewActionButton.IsEnabled = _snapshot is not null && supported && (!hold || selected.Select(b => b.Candidate.ClassName).Distinct().Count() == 1);
         ActionHint.Text = resource is null || selected.Length == 0 ? "Choose a building and a resource above." : !supported ?
             "This building and resource combination is available for inspection. Editing is not yet verified." : hold && selected.Select(b => b.Candidate.ClassName).Distinct().Count() != 1 ?
             "Select one building type to save a minimum. One rule applies to every matching building of that type." : hold ?
-            "Save a minimum for every building of this type. Use Start saved rules to keep it stocked while you play." :
+            "Save a minimum for every building of this type. Use Start saved rules to keep it stocked while you play." : raise ?
+            "Increase each selected building to this amount once. Higher amounts stay unchanged; no rule is saved." :
             "Add an amount once to the selected buildings. You can review the changes before applying them.";
+        if (hold && resource is not null && selected.Length > 0 && _state.AutomationProfiles.TryGetValue(_state.SelectedProfile, out var activeProfile))
+        {
+            var rule = activeProfile.MaintenanceRules.FirstOrDefault(r => r.ResourceId == resource.Id &&
+                string.Equals(r.BuildingType.Trim(), selected[0].Candidate.ClassName, StringComparison.OrdinalIgnoreCase));
+            if (rule?.Target is decimal target)
+                ActionHint.Text += $" Current saved target: {target:N0} ({(rule.Enabled ? "enabled" : "disabled")}).";
+        }
         CapacityTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => CapacityObservation.SupportsClass(b.Candidate.ClassName) && b.Candidate.ObservedCapacity is not null);
         FarmTool.IsEnabled = _snapshot is not null && selected.Length == 1 && selected[0].Candidate.ClassName == "building_grain_farm";
         ExportTool.IsEnabled = _snapshot is not null && selected.Length > 0 && selected.All(b => TradingStockLimits.SupportsClass(b.Candidate.ClassName));
@@ -457,7 +466,7 @@ public partial class BuildingWindow : Window
             _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
             ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "The one-time stock action invalidated the previous snapshot.";
             BottomStatus.Text = "Check the game before saving; reload the backup if anything is unexpected.";
-        }, amount) { Owner = this }.ShowDialog();
+        }, amount, raiseTo: RaiseIntent.IsChecked == true) { Owner = this }.ShowDialog();
     }
     private void KeepStocked_Click(object sender, RoutedEventArgs e)
     {

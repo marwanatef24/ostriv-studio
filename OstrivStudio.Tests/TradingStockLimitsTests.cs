@@ -62,6 +62,27 @@ internal static class TradingStockLimitsTests
             BitConverter.ToSingle(memory.Read(0x30018, 4)) == 7001 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 7002,
             "export allocation writes different reviewed targets and verifies both");
         (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
+        var increment = TradingStockLimits.CreateIncrementPlan(snapshot, 12, 25);
+        Check(increment.Select(x => x.Minimum).SequenceEqual([5025m, 6025m]) &&
+            TradingStockLimits.ApplyIncrementChecked(snapshot, 12, 25, memory) == 2 &&
+            BitConverter.ToSingle(memory.Read(0x30018, 4)) == 5025 && BitConverter.ToSingle(memory.Read(0x40018, 4)) == 6025,
+            "bulk export addition increases each building from its own existing target");
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
+        foreach (decimal amount in new[] { 0m, -1m, 0.5m, 1_000_001m, 999_000m })
+        {
+            try { TradingStockLimits.ApplyIncrementChecked(snapshot, 12, amount, memory); throw new Exception("Invalid or excessive export addition accepted"); }
+            catch (InvalidOperationException) when (memory.Writes == 0) { }
+        }
+        try { TradingStockLimits.ApplyIncrementChecked(snapshot, 87, 1, memory); throw new Exception("Missing export addition accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { }
+        Console.WriteLine("PASS invalid additions, resulting targets above the limit and missing export entries block all writes");
+        memory.Put(0x40018, BitConverter.GetBytes(6001f));
+        try { TradingStockLimits.ApplyIncrementChecked(snapshot, 12, 25, memory); throw new Exception("Stale export addition accepted"); }
+        catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS stale export settings block a bulk addition before writes"); }
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory); memory.FailOnWrite = 2;
+        try { TradingStockLimits.ApplyIncrementChecked(snapshot, 12, 25, memory); throw new Exception("Partial export addition ignored"); }
+        catch (PartialGameWriteException) when (memory.Writes == 2) { Console.WriteLine("PASS uncertain bulk export addition requires backup recovery"); }
+        (scan, posts, memory) = Fixture(); snapshot = TradingStockLimits.Capture(scan, posts, memory);
         try { TradingStockLimits.ApplyAllocationsChecked(snapshot, [allocation[0], new(posts[1].Address, 87, 100)], memory); throw new Exception("Missing allocated entry accepted"); }
         catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS missing allocated export entry blocks every write"); }
         memory.Put(0x40018, BitConverter.GetBytes(6001f));

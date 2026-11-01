@@ -150,6 +150,22 @@ public static class TradingStockLimits
         }
         return count;
     }
+    // Add the same positive amount to each reviewed building's existing
+    // export target. This deliberately does not create missing entries.
+    public static IReadOnlyList<ExportAllocation> CreateIncrementPlan(TradingLimitsSnapshot snapshot, int resourceId, decimal amount)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        if (amount <= 0 || amount > 1_000_000m || decimal.Truncate(amount) != amount)
+            throw new InvalidOperationException("Enter a positive whole-unit amount to add, up to 1,000,000.");
+        if (snapshot.Posts.Count == 0 || snapshot.Posts.Any(p => p.Limits.Count(x => x.ResourceId == resourceId) != 1))
+            throw new InvalidOperationException("Every selected trading building must already have this export-stock entry.");
+        var plan = snapshot.Posts.Select(p => new ExportAllocation(p.Building.Address, resourceId,
+            checked((decimal)p.Limits.Single(x => x.ResourceId == resourceId).Target + amount))).ToArray();
+        _ = CountAllocationChanges(snapshot, plan); // applies the same target, identity and duplicate checks as bulk allocation
+        return Array.AsReadOnly(plan);
+    }
+    public static int ApplyIncrementChecked(TradingLimitsSnapshot reviewed, int resourceId, decimal amount, FishBulkEditor.IMemory memory)
+        => ApplyAllocationsChecked(reviewed, CreateIncrementPlan(reviewed, resourceId, amount), memory);
     public static int ApplyAllocationsChecked(TradingLimitsSnapshot reviewed, IReadOnlyList<ExportAllocation> plan, FishBulkEditor.IMemory memory)
     {
         int changes = CountAllocationChanges(reviewed, plan), attempted = 0;
@@ -224,6 +240,28 @@ public static class TradingStockLimits
     {
         public byte[] Read(ulong address, int size) => inner.Read(address, size);
         public void Write(ulong address, byte[] data) { pause.EnsurePaused(); inner.Write(address, data); }
+    }
+    public static int ApplyIncrementToGame(TradingLimitsSnapshot reviewed, int resourceId, decimal amount, CancellationToken cancellation)
+    {
+        var plan = CreateIncrementPlan(reviewed, resourceId, amount);
+        cancellation.ThrowIfCancellationRequested();
+        using var process = CheckedProcess(reviewed.Scan);
+        ulong moduleBase = checked((ulong)process.MainModule!.BaseAddress.ToInt64());
+        using var memory = new ExistingRuleExecutor.ProcessMemory(reviewed.Scan.ProcessId);
+        var image = BuildingDiscovery.LoadImage(reviewed.Scan.GamePath).Image;
+        if (!image.AsSpan(0x3f5ec0, 32).SequenceEqual(memory.Read(moduleBase + 0x3f5ec0, 32)))
+            throw new InvalidOperationException("The running game's pause control differs from the tested build.");
+        var pause = new GamePauseControl(memory, moduleBase); pause.Acquire(cancellation); int applied = 0;
+        try
+        {
+            cancellation.ThrowIfCancellationRequested(); pause.EnsurePaused();
+            applied = ApplyAllocationsChecked(reviewed, plan, new GuardedMemory(memory, pause));
+            pause.Resume(); return applied;
+        }
+        catch (PartialGameWriteException) { throw; }
+        catch (Exception ex) when (applied > 0)
+        { throw new PartialGameWriteException("Export targets changed but the game could not resume. Reload the backup. " + ex.Message, ex); }
+        catch { pause.ResumeAfterPreflightFailure(); throw; }
     }
     public static int ApplyToGame(TradingLimitsSnapshot reviewed, int resourceId, decimal target, CancellationToken cancellation, TradeDeal? requiredDeal = null)
     {
