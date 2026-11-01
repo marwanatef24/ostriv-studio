@@ -10,7 +10,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+            <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
               <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
             </Border>
             <ControlTemplate.Triggers>
@@ -82,6 +82,7 @@
           </StackPanel>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="Home" Click="Home_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
           <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#17253A" BorderThickness="0" />
           <Button Content="Start saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" />
         </StackPanel>
@@ -96,7 +97,7 @@
         </StackPanel>
       </Grid>
     </Border>
-    <Grid Grid.Row="1">
+    <Grid Grid.Row="1" x:Name="WorkspaceHost" Visibility="Collapsed">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="164" />
         <ColumnDefinition Width="310" />
@@ -319,11 +320,16 @@
               <WrapPanel Margin="0,12,0,20">
                 <Button Content="Clothes  →" Tag="Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
                 <Button Content="Shoes  →" Tag="Shoes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
-                <Button Content="Salt  →" Tag="Salt" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
+                <Button Content="Warm clothes  →" Tag="Warm Clothes" Click="MarketResource_Click" Style="{StaticResource WorkButton}" Background="#EDE7F5" Foreground="#4F376B" BorderThickness="0" Padding="24,18" Margin="0,0,12,8" />
               </WrapPanel>
+              <Border Background="#EEF5EF" CornerRadius="12" Padding="18" Margin="0,0,0,20"><StackPanel>
+                <TextBlock Text="Keep supported shop goods stocked" FontWeight="SemiBold" FontSize="16" />
+                <TextBlock Text="Create missing saved rules for clothes, shoes and warm clothes in all rowhouse shops. Existing rules stay unchanged; only existing stock records can be maintained." Foreground="#52665B" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <Button Content="Set up shop rules…" Click="SetupMarketRules_Click" Style="{StaticResource WorkButton}" Background="#174F47" Foreground="White" BorderThickness="0" HorizontalAlignment="Left" />
+              </StackPanel></Border>
               <Border BorderBrush="#DED5E9" BorderThickness="1" CornerRadius="10" Padding="18"><StackPanel>
                 <TextBlock Text="What can be edited?" FontWeight="SemiBold" FontSize="16" />
-                <TextBlock Text="Existing clothes, shoes and salt in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
+                <TextBlock Text="Existing clothes, shoes and warm clothes in rowhouse shops support additions or saved minimums up to 100. Other goods and missing records are inspection only." Foreground="#56667D" TextWrapping="Wrap" Margin="0,8,0,14" />
                 <Button Content="Find rowhouse shops" Click="FindMarkets_Click" Style="{StaticResource WorkButton}" HorizontalAlignment="Left" />
               </StackPanel></Border>
             </StackPanel></ScrollViewer>
@@ -331,6 +337,50 @@
         </Grid></Border>
         <TextBlock Grid.Row="3" x:Name="BottomStatus" Text="Your saved rules stay on this PC." Foreground="#56667D" FontSize="11" Margin="0,13,0,0" TextWrapping="Wrap" />
       </Grid>
+    </Grid>
+    <Grid Grid.Row="1" x:Name="HomePanel" Background="#F5F3EC">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="1190" Margin="36,30,36,42">
+          <Border CornerRadius="18" Background="#173E35" Padding="32,28" Margin="0,0,0,24">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <StackPanel>
+                <TextBlock Text="YOUR SETTLEMENT, AT A GLANCE" Foreground="#B8D8BE" FontSize="11" FontWeight="Bold" />
+                <TextBlock Text="What would you like to manage?" Foreground="White" FontSize="32" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                <TextBlock Text="Choose a task below. Open Ostriv and load your settlement when you're ready." Foreground="#D5E7D8" FontSize="15" Margin="0,10,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+              <Border Grid.Column="1" Background="#28594B" CornerRadius="12" Padding="16,12" Margin="20,0,0,0" VerticalAlignment="Center">
+                <StackPanel><TextBlock Text="GAME STATUS" Foreground="#B8D8BE" FontSize="10" FontWeight="Bold" />
+                  <TextBlock Text="{Binding Text, ElementName=ConnectionTitle}" Foreground="White" FontSize="15" FontWeight="SemiBold" Margin="0,5,0,0" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </Border>
+          <DockPanel Margin="0,0,0,14"><TextBlock Text="Choose a task" FontSize="21" FontWeight="SemiBold" DockPanel.Dock="Left" />
+            <TextBlock Text="Your saved rules stay on this PC" Foreground="#63746A" HorizontalAlignment="Right" VerticalAlignment="Center" /></DockPanel>
+          <UniformGrid Columns="3" Rows="2">
+            <Button Tag="0" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="0,0,12,12" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="▦" FontSize="26" Foreground="#31755D"/><TextBlock Text="Resources" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Add stock once or keep it stocked with a saved rule." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage resources  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+            <Button Tag="2" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="6,0,6,12" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="◒" FontSize="26" Foreground="#638044"/><TextBlock Text="Farms" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Plan crops, manage ploughing and restore field nutrients." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage farms  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+            <Button Tag="3" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="12,0,0,12" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="⇄" FontSize="26" Foreground="#A36938"/><TextBlock Text="Trading" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="See city deals and prepare existing export targets." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage trading  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+            <Button Tag="4" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="0,6,12,0" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="◈" FontSize="26" Foreground="#8A658C"/><TextBlock Text="Markets" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Find supported shop items and manage their stock." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage markets  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+            <Button Tag="1" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="White" Foreground="#203B32" BorderBrush="#DBE3D9" Padding="22" Margin="6,6,6,0" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="▤" FontSize="26" Foreground="#58838B"/><TextBlock Text="Storage capacity" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Increase supported storage limits for your buildings." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Manage capacity  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+            <Button Tag="5" Click="HomeTask_Click" Style="{StaticResource WorkButton}" Background="#E6EEE3" Foreground="#203B32" BorderBrush="#D0DDCE" Padding="22" Margin="12,6,0,0" HorizontalContentAlignment="Stretch">
+              <StackPanel><TextBlock Text="↻" FontSize="26" Foreground="#31755D"/><TextBlock Text="Saved rules" FontSize="20" FontWeight="SemiBold" Margin="0,10,0,0"/><TextBlock Text="Review your profiles and automatic stock settings." Foreground="#52665B" TextWrapping="Wrap" Margin="0,7,0,0"/><TextBlock Text="Open saved rules  →" Foreground="#26684F" FontWeight="SemiBold" Margin="0,18,0,0"/></StackPanel>
+            </Button>
+          </UniformGrid>
+          <TextBlock Text="Changes are reviewed before they are applied. Some game features are still being verified." Foreground="#63746A" Margin="0,24,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+      </ScrollViewer>
     </Grid>
   </Grid>
 </Window>
