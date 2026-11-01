@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3 — experimental preview
+
+- Added a building-group filter and clearer category labels in building results.
+- Refreshed the building workspace colors and improved contrast between one-time and saved actions.
+
 ## 0.1.2 — experimental preview
 
 - Added existing export-target editing for trading docks, including bulk changes across selected posts and docks.

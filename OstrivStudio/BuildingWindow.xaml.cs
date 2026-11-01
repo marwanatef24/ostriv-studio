@@ -21,7 +21,7 @@ public sealed record BuildingRow(string Name, int ResourceCount, BuildingCandida
         var x when x.Contains("farm", StringComparison.Ordinal) || x.Contains("field", StringComparison.Ordinal) || x.Contains("hay", StringComparison.Ordinal) => "Farm",
         var x when x.Contains("warehouse", StringComparison.Ordinal) || x.Contains("granary", StringComparison.Ordinal) || x.Contains("storage", StringComparison.Ordinal) => "Storage",
         var x when x.Contains("well", StringComparison.Ordinal) => "Water",
-        _ => "Building"
+        _ => "Other buildings"
     };
     public string Badge => Category switch { "Trade" => "T", "Farm" => "F", "Storage" => "S", "Water" => "W", _ => "B" };
 }
@@ -46,7 +46,7 @@ public partial class BuildingWindow : Window
     {
         InitializeComponent();
         _buildingView = CollectionViewSource.GetDefaultView(_buildings);
-        _buildingView.Filter = x => x is BuildingRow row && (string.IsNullOrWhiteSpace(BuildingSearch.Text) || row.Name.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Summary.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase)) &&
+        _buildingView.Filter = x => x is BuildingRow row && (BuildingCategory.SelectedIndex <= 0 || (BuildingCategory.SelectedItem as ComboBoxItem)?.Content?.ToString() == row.Category) && (string.IsNullOrWhiteSpace(BuildingSearch.Text) || row.Name.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Summary.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase) || row.Category.Contains(BuildingSearch.Text, StringComparison.OrdinalIgnoreCase)) &&
             (FilterBuildingsByResource.IsChecked != true || string.IsNullOrWhiteSpace(ResourceSearch.Text) || row.Candidate.Resources.Any(r =>
                 ResourceInsights.Matches(r.Id, _resourceNames.GetValueOrDefault(r.Id, $"Unknown resource {r.Id}"), ResourceSearch.Text)));
         BuildingGrid.ItemsSource = _buildingView;
@@ -75,6 +75,11 @@ public partial class BuildingWindow : Window
     }
 
     private static string DisplayName(string input) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(input.Replace('_', ' ').ToLowerInvariant());
+    private void BuildingCategory_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        _buildingView?.Refresh();
+        if (_buildingView is not null) UpdateCount();
+    }
     private async void CheckUpdates_Click(object sender, RoutedEventArgs e) => await UpdateService.CheckAsync(this, true);
     private void ResourceSearch_Changed(object sender, TextChangedEventArgs e)
     {
