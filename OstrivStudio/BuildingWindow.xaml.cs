@@ -184,8 +184,10 @@ public partial class BuildingWindow : Window
     {
         _observations.Clear();
         if (BuildingGrid.SelectedItem is not BuildingRow row) { SelectedTitle.Text = "Choose a building"; SelectedSubtitle.Text = "Its stock and available controls will appear here."; UpdateActions(); return; }
-        SelectedTitle.Text = row.Name;
-        SelectedSubtitle.Text = $"{row.Candidate.Resources.Count} records in this snapshot. Instance numbers may change after a scan." +
+        int selectedCount = BuildingGrid.SelectedItems.Count;
+        SelectedTitle.Text = selectedCount > 1 ? $"{selectedCount} buildings selected" : row.Name;
+        SelectedSubtitle.Text = (selectedCount > 1 ? $"The resource table shows {row.Name}. One-time actions use all {selectedCount} selected buildings. " : "") +
+            $"{row.Candidate.Resources.Count} records in this snapshot. Instance numbers may change after a scan." +
             (row.Candidate.ObservedCapacity is float capacity ? $" Observed capacity: {capacity:N0} (check in game)." : "");
         static string FormatAmount(double value) => value.ToString("0.##", CultureInfo.CurrentCulture);
         foreach (var total in BuildingDiscovery.Summarize(row.Candidate.Resources).OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
