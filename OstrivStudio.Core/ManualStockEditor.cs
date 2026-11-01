@@ -3,13 +3,22 @@ using System.Security.Cryptography;
 
 namespace OstrivStudio.Core;
 
-// One-time addition to existing stored records. It never creates a profile
-// rule or inserts a missing resource and keeps the full scan for overlap checks.
+// One-time increases to existing stored records. These never create a profile
+// rule or insert a missing resource and retain the full scan for overlap checks.
 public static class ManualStockEditor
 {
     private static bool Overlap(ulong a, ulong b, ulong c, ulong d) => a < d && c < b;
 
     public static ExistingRuleExecutor.Plan Prepare(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal amount)
+        => PrepareCore(scan, selected, resourceId, amount, false);
+
+    // A raise operation targets the combined stored amount in each building.
+    // It never decreases stock: reservation and removal invariants have not
+    // been established for arbitrary resources in the running game.
+    public static ExistingRuleExecutor.Plan PrepareRaiseTo(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal target)
+        => PrepareCore(scan, selected, resourceId, target, true);
+
+    private static ExistingRuleExecutor.Plan PrepareCore(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal amount, bool raiseTo)
     {
         if (!scan.Complete || scan.UnreadableChunks != 0 || scan.GameSha256 != FishBulkEditor.SupportedHash || scan.CountOffset != 408 || scan.PointerOffset != 416 ||
             scan.Buildings.Select(b => b.Address).Distinct().Count() != scan.Buildings.Count)
@@ -23,15 +32,17 @@ public static class ManualStockEditor
             if (!scan.Buildings.Any(x => ReferenceEquals(x, b)) || !ExistingRuleExecutor.SupportsExisting(b.ClassName, resourceId) ||
                 b.ResourceCount != b.Resources.Count || b.ResourceCount is <= 0 or > 511 || b.ResourcePointer == 0 ||
                 b.Resources.Where((r, i) => r.Index != i || !float.IsFinite(r.Amount) || r.Amount < 0 || r.Amount > 1_000_000_000f).Any())
-                throw new InvalidOperationException("One selected building or resource is not supported for a one-time addition.");
+                throw new InvalidOperationException("One selected building or resource is not supported for a one-time stock update.");
             var stored = b.Resources.Where(r => r.Id == resourceId && r.Status == 0).ToArray();
             if (stored.Length == 0) throw new InvalidOperationException("Every selected building must already contain this stored resource.");
-            if (b.ClassName == "building_rowhouse_shop" && stored.Sum(r => (decimal)r.Amount) + amount > 100)
-                throw new InvalidOperationException("Retail additions cannot exceed the observed 100-unit shelf target.");
-            decimal next = (decimal)stored[0].Amount + amount;
+            decimal currentTotal = stored.Sum(r => (decimal)r.Amount);
+            decimal increase = raiseTo ? Math.Max(0, amount - currentTotal) : amount;
+            if (increase > 0 && b.ClassName == "building_rowhouse_shop" && currentTotal + increase > 100)
+                throw new InvalidOperationException("Retail stock cannot be increased beyond the observed 100-unit shelf target.");
+            decimal next = (decimal)stored[0].Amount + increase;
             if (next > 1_000_000_000m || (decimal)(float)next != next)
                 throw new InvalidOperationException("The resulting quantity cannot be represented exactly.");
-            if (b.ClassName == CampRuleExecutor.BuildingType &&
+            if (increase > 0 && b.ClassName == CampRuleExecutor.BuildingType &&
                 !b.Resources.Any(r => r.Status == 0 && r.Id != resourceId && float.IsFinite(r.Amount) && r.Amount >= 1000f) &&
                 !(stored[0].Amount > 0 && next >= 1000))
                 throw new InvalidOperationException("Camp storage requires a nonempty 1,000-unit anchor before adding stock.");
@@ -40,13 +51,16 @@ public static class ManualStockEditor
                 scan.Buildings.Any(other => other.Address != b.Address && other.ResourceCount > 0 && other.ResourcePointer != 0 &&
                     Overlap(start, end, other.ResourcePointer, checked(other.ResourcePointer + (ulong)other.ResourceCount * 20))))
                 throw new InvalidOperationException("A selected resource array overlaps another observed object.");
-            entries.Add(new(1, b, stored[0], (float)next));
+            if (increase > 0) entries.Add(new(1, b, stored[0], (float)next));
         }
         return new(entries.AsReadOnly(), []);
     }
 
     public static int ApplyChecked(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal amount, FishBulkEditor.IMemory memory)
         => ExistingRuleExecutor.ApplyPlannedChecked(Prepare(scan, selected, resourceId, amount), scan, memory).Applied;
+
+    public static int ApplyRaiseToChecked(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal target, FishBulkEditor.IMemory memory)
+        => ExistingRuleExecutor.ApplyPlannedChecked(PrepareRaiseTo(scan, selected, resourceId, target), scan, memory).Applied;
 
     private sealed class GuardedMemory(FishBulkEditor.IMemory inner, GamePauseControl pause) : FishBulkEditor.IMemory
     {
@@ -55,8 +69,15 @@ public static class ManualStockEditor
     }
 
     public static int ApplyToGame(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal amount, CancellationToken cancellation)
+        => ApplyToGameCore(scan, selected, resourceId, amount, cancellation, false);
+
+    public static int ApplyRaiseToGame(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal target, CancellationToken cancellation)
+        => ApplyToGameCore(scan, selected, resourceId, target, cancellation, true);
+
+    private static int ApplyToGameCore(DiscoveryResult scan, IReadOnlyList<BuildingCandidate> selected, int resourceId, decimal amount, CancellationToken cancellation, bool raiseTo)
     {
-        var reviewed = Prepare(scan, selected, resourceId, amount);
+        var reviewed = PrepareCore(scan, selected, resourceId, amount, raiseTo);
+        if (reviewed.Entries.Count == 0) return 0;
         cancellation.ThrowIfCancellationRequested();
         using (var file = File.Open(scan.GamePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
             if (Convert.ToHexString(SHA256.HashData(file)) != FishBulkEditor.SupportedHash) throw new InvalidOperationException("The game executable changed.");
@@ -79,7 +100,7 @@ public static class ManualStockEditor
                 .Select(type => new MaintenanceRule { Enabled = true, BuildingType = type, ResourceId = resourceId, Target = 0 }).ToList() };
             var fresh = LiveRuleExecutor.Refresh(scan, settings, memory);
             var freshSelected = selected.Select(b => fresh.Buildings.Single(x => x.Address == b.Address && x.Vtable == b.Vtable && x.ClassName == b.ClassName)).ToArray();
-            var current = Prepare(fresh, freshSelected, resourceId, amount);
+            var current = PrepareCore(fresh, freshSelected, resourceId, amount, raiseTo);
             if (reviewed.Entries.Count != current.Entries.Count || reviewed.Entries.Zip(current.Entries).Any(p =>
                 p.First.Building.Address != p.Second.Building.Address || p.First.Building.ResourcePointer != p.Second.Building.ResourcePointer ||
                 !p.First.Building.Resources.SequenceEqual(p.Second.Building.Resources) || p.First.Record != p.Second.Record || p.First.Target != p.Second.Target))

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8 — target quantities and bulk export additions
+
+- Raise an existing supported resource to a chosen minimum once across selected buildings; quantities already above it remain unchanged.
+- Add the same amount to each selected trading building's existing export target, with a per-building preview.
+- Allow multiple supported missing resources to be inserted in one automation cycle when verified spare slots are available. This batch change has simulated-memory coverage but has not been tested with a live game write.
+- Reductions, direct deal editing, other unsupported goods and building features remain unavailable.
+
 ## 0.2.7 — visible quantities and clearer automation
 
 - Enter an addition or saved minimum directly on the building screen; review the addition before applying it.

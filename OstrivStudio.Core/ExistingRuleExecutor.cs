@@ -136,49 +136,53 @@ public static class ExistingRuleExecutor
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(12), r.Details);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(16), r.Extra); return data;
     }
-    private static byte[] Header(FishBulkEditor.IMemory memory, DiscoveryResult scan, BuildingCandidate b, bool insert)
+    private static byte[] Header(FishBulkEditor.IMemory memory, DiscoveryResult scan, BuildingCandidate b, int insertions)
     {
-        int length = scan.PointerOffset + (insert ? 12 : 8);
+        int length = scan.PointerOffset + (insertions > 0 ? 12 : 8);
         byte[] data = memory.Read(b.Address, length);
         if (data.Length != length || BinaryPrimitives.ReadUInt64LittleEndian(data) != b.Vtable ||
             BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(scan.CountOffset)) != b.ResourceCount ||
             BinaryPrimitives.ReadUInt64LittleEndian(data.AsSpan(scan.PointerOffset)) != b.ResourcePointer)
             throw new InvalidOperationException("A building changed since the scan.");
-        if (insert)
+        if (insertions > 0)
         {
             int allocated = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(424));
-            if (allocated <= b.ResourceCount || allocated > 4096 || allocated % 64 != 0)
-                throw new InvalidOperationException("The granary has no verified spare resource slot.");
+            if (insertions > 511 - b.ResourceCount || allocated < b.ResourceCount + insertions || allocated > 4096 || allocated % 64 != 0)
+                throw new InvalidOperationException("The building has insufficient verified spare resource slots.");
         }
         return data;
     }
     private static Plan QualifyInsertions(Plan plan, DiscoveryResult scan, FishBulkEditor.IMemory memory)
     {
         var entries = new List<Entry>(); var skipped = plan.Skipped.ToList();
-        var reserved = new HashSet<ulong>();
+        var reserved = new Dictionary<ulong, int>();
         foreach (var entry in plan.Entries)
         {
             if (!entry.Insert) { entries.Add(entry); continue; }
             var b = entry.Building;
             string reason = "";
-            if (reserved.Contains(b.Address)) reason = "only one new record per building can be added in a cycle";
+            int index = b.ResourceCount + reserved.GetValueOrDefault(b.Address);
+            if (index >= 511) reason = "the resource array has reached the supported record limit";
             else
             {
-                byte[] header = Header(memory, scan, b, false);
-                int allocated = BinaryPrimitives.ReadInt32LittleEndian(memory.Read(checked(b.Address + 424), 4));
-                if (allocated <= b.ResourceCount || allocated > 4096 || allocated % 64 != 0) reason = "no verified spare resource slot";
+                byte[] header = memory.Read(b.Address, scan.PointerOffset + 12);
+                if (!header.AsSpan(0, scan.PointerOffset + 8).SequenceEqual(Header(memory, scan, b, 0)))
+                    throw new InvalidOperationException("A building changed while its spare slots were checked.");
+                int allocated = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(424));
+                if (allocated <= index || allocated > 4096 || allocated % 64 != 0) reason = "no verified spare resource slot";
                 else
                 {
-                    byte[] slot = memory.Read(checked(b.ResourcePointer + (ulong)b.ResourceCount * 20), 20);
-                    if (!header.AsSpan().SequenceEqual(Header(memory, scan, b, false)))
+                    ulong address = checked(b.ResourcePointer + (ulong)index * 20);
+                    byte[] slot = memory.Read(address, 20);
+                    if (!header.AsSpan().SequenceEqual(memory.Read(b.Address, header.Length)))
                         throw new InvalidOperationException("A building changed while its spare slot was checked.");
-                    if (!slot.AsSpan().SequenceEqual(memory.Read(checked(b.ResourcePointer + (ulong)b.ResourceCount * 20), 20)))
+                    if (!slot.AsSpan().SequenceEqual(memory.Read(address, 20)))
                         throw new InvalidOperationException("A spare resource slot changed while it was checked.");
                 }
             }
             if (reason.Length != 0)
                 skipped.Add($"Rule {entry.RuleNumber} (resource {entry.Record.Id}): candidate 0x{b.Address:X}: {reason}.");
-            else { reserved.Add(b.Address); entries.Add(entry); }
+            else { reserved[b.Address] = reserved.GetValueOrDefault(b.Address) + 1; entries.Add(entry with { Record = entry.Record with { Index = index } }); }
         }
         return new(entries.AsReadOnly(), skipped.AsReadOnly());
     }
@@ -198,27 +202,34 @@ public static class ExistingRuleExecutor
     {
         if (plan.Entries.Count == 0) return new(scan, 0, plan);
         var buildings = plan.Entries.Select(e => e.Building).DistinctBy(b => b.Address).ToArray();
-        bool Inserts(BuildingCandidate b) => plan.Entries.Any(e => e.Building.Address == b.Address && e.Insert);
-        var ranges = buildings.Select(b => (Start: b.ResourcePointer, End: checked(b.ResourcePointer + (ulong)(b.ResourceCount + (Inserts(b) ? 1 : 0)) * 20))).OrderBy(r => r.Start).ToArray();
+        int Insertions(BuildingCandidate b) => plan.Entries.Count(e => e.Building.Address == b.Address && e.Insert);
+        foreach (var b in buildings)
+        {
+            int next = b.ResourceCount;
+            foreach (var entry in plan.Entries.Where(e => e.Building.Address == b.Address && e.Insert))
+                if (entry.Record.Index != next++) throw new InvalidOperationException("The planned insertion order is invalid.");
+        }
+        var ranges = buildings.Select(b => (Start: b.ResourcePointer, End: checked(b.ResourcePointer + (ulong)(b.ResourceCount + Insertions(b)) * 20))).OrderBy(r => r.Start).ToArray();
         if (ranges.Zip(ranges.Skip(1)).Any(p => p.First.End > p.Second.Start) ||
+            ranges.Any(r => scan.UiCandidates.Any(ui => r.Start < checked(ui.Address + 8) && ui.Address < r.End)) ||
             ranges.Any(r => scan.Buildings.Any(b => r.Start < checked(b.Address + (ulong)scan.PointerOffset + 12) && b.Address < r.End)) ||
-            buildings.Where(Inserts).Any(b => scan.Buildings.Where(other => other.Address != b.Address && other.ResourcePointer != 0).Any(other =>
+            buildings.Where(b => Insertions(b) > 0).Any(b => scan.Buildings.Where(other => other.Address != b.Address && other.ResourcePointer != 0).Any(other =>
                 b.ResourcePointer < checked(other.ResourcePointer + (ulong)other.ResourceCount * 20) &&
-                other.ResourcePointer < checked(b.ResourcePointer + (ulong)(b.ResourceCount + 1) * 20))))
+                other.ResourcePointer < checked(b.ResourcePointer + (ulong)(b.ResourceCount + Insertions(b)) * 20))))
             throw new InvalidOperationException("Resource arrays overlap each other or a building header.");
         var headers = new Dictionary<ulong, byte[]>(); var expected = new Dictionary<ulong, byte[]>();
         foreach (var b in buildings)
         {
-            bool insert = Inserts(b);
-            headers[b.Address] = Header(memory, scan, b, insert);
+            int insertions = Insertions(b);
+            headers[b.Address] = Header(memory, scan, b, insertions);
             byte[] bytes = b.Resources.SelectMany(Encode).ToArray();
             if (!bytes.AsSpan().SequenceEqual(memory.Read(b.ResourcePointer, bytes.Length)))
                 throw new InvalidOperationException("Resources changed since the scan.");
-            if (insert)
+            if (insertions > 0)
             {
-                byte[] slot = memory.Read(checked(b.ResourcePointer + (ulong)b.ResourceCount * 20), 20);
-                if (slot.Length != 20) throw new InvalidOperationException("A spare resource slot could not be read.");
-                bytes = bytes.Concat(slot).ToArray();
+                byte[] slots = memory.Read(checked(b.ResourcePointer + (ulong)b.ResourceCount * 20), checked(insertions * 20));
+                if (slots.Length != insertions * 20) throw new InvalidOperationException("Spare resource slots could not be read.");
+                bytes = bytes.Concat(slots).ToArray();
             }
             expected[b.Address] = bytes;
         }
@@ -234,13 +245,15 @@ public static class ExistingRuleExecutor
                 attempts++;
                 if (entry.Insert)
                 {
+                    int previousCount = BinaryPrimitives.ReadInt32LittleEndian(headers[b.Address].AsSpan(scan.CountOffset));
+                    if (entry.Record.Index != previousCount) throw new InvalidOperationException("The planned insertion order is invalid.");
                     int offset = checked(entry.Record.Index * 20);
                     byte[] record = Encode(entry.Record with { Amount = entry.Target });
                     memory.Write(checked(b.ResourcePointer + (ulong)offset), record); record.CopyTo(bytes, offset);
                     if (!headers[b.Address].AsSpan().SequenceEqual(memory.Read(b.Address, headers[b.Address].Length)) ||
                         !bytes.AsSpan().SequenceEqual(memory.Read(b.ResourcePointer, bytes.Length)))
                         throw new InvalidOperationException("The new resource record failed readback.");
-                    byte[] count = BitConverter.GetBytes(b.ResourceCount + 1);
+                    byte[] count = BitConverter.GetBytes(previousCount + 1);
                     memory.Write(checked(b.Address + (ulong)scan.CountOffset), count); count.CopyTo(headers[b.Address], scan.CountOffset);
                 }
                 else

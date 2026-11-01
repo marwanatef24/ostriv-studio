@@ -17,6 +17,7 @@ The installer includes the Windows x64 runtime. Installed copies check for updat
 Search the building list by building or stock name. Each row summarizes its observed stored resources; select a row to inspect its inventory and stock mix. Use **All**, **Same type**, Ctrl-click or Shift-click to select several candidates. The stock mix shows the largest observed resources for the selected building, as shares of its observed stored stock. Candidate labels and amounts are snapshots, not persistent in-game building identifiers; verify them against Ostriv before a write and scan again after loading a settlement.
 
 - Choose **Add once**, enter the amount on the building screen, and review a positive addition to an existing supported stored resource in each selected building. It does not create a saved rule or add a missing stock entry.
+- Choose **Raise to** to increase each selected building to a chosen minimum once; buildings already at or above it are left unchanged. This does not lower existing stock or create a rule.
 - Choose **Keep stocked**, enter a quantity, and save a minimum in the selected profile. A rule applies to matching buildings of the chosen type; it is not pinned to a particular building instance.
 - **Resource overview** shows the observed stock breakdown, session history and CSV export. Candidate totals can overlap and need not match the town total.
 
