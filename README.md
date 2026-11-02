@@ -8,7 +8,7 @@ Ostriv Studio is an independent, experimental Windows companion for inspecting a
 
 1. Download the latest `OstrivStudio.Editor-win-Setup.exe` from [GitHub releases](https://github.com/marwanatef24/ostriv-studio/releases).
 2. Run the installer and launch **Ostriv Studio** from the Start menu. Windows may identify an unsigned preview installer as unrecognized.
-3. Start Ostriv and load the settlement you want to use. Select **Choose game** if Ostriv is not found automatically, then **Find** to see buildings in the editor workspace.
+3. Start Ostriv and load the settlement you want to use. Select **Choose game** if Ostriv is not found automatically. When enabled saved rules start, their first complete scan also shows the buildings. Otherwise select **Find** to scan.
 
 The installer includes the Windows x64 runtime. Installed copies check for updates on launch; **More → Check for updates** checks manually. When an update is available, review its changelog and choose whether to install it. Applying an update restarts the editor. Profiles are stored outside the installation folder.
 

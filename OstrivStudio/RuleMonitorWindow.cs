@@ -36,6 +36,7 @@ public sealed class RuleMonitorWindow : Window
     public event Action? StatusChanged;
     public event Action? StopRequested;
     public event Action? WriteStarting;
+    public event Action<DiscoveryResult>? InitialScanReady;
 
     public RuleMonitorWindow(string settingsPath, string profile, string gamePath, IReadOnlyDictionary<int, string> resources, bool background = false)
     {
@@ -177,6 +178,12 @@ public sealed class RuleMonitorWindow : Window
         SetStatus("Scanning the running game. This can take a little while…");
         byte[]? profileHashAtScan = null;
         bool settlementDetected = false;
+        bool initialScanSent = false;
+        var initialScanProgress = new Progress<DiscoveryResult>(scan =>
+        {
+            if (!_closed && ReferenceEquals(_cancellation, cts) && !cts.IsCancellationRequested)
+                InitialScanReady?.Invoke(scan);
+        });
         var progress = new Progress<RuleMonitorReport>(report =>
         {
             if (_closed || !ReferenceEquals(_cancellation, cts) || cts.IsCancellationRequested) return;
@@ -232,6 +239,11 @@ public sealed class RuleMonitorWindow : Window
                 settlementDetected = scan.Buildings.Count > 0;
                 if (!before.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
                     throw new InvalidOperationException("Profile settings changed while scanning; restart with the saved rules.");
+                if (!runRules && !initialScanSent && scan.Complete && scan.UnreadableChunks == 0 && scan.Buildings.Count > 0)
+                {
+                    initialScanSent = true;
+                    ((IProgress<DiscoveryResult>)initialScanProgress).Report(scan);
+                }
                 if (runRules)
                 {
                     if (_reviewedReport is null || _reviewedSettingsHash is null || !_reviewedSettingsHash.AsSpan().SequenceEqual(before))
