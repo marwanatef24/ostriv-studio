@@ -242,7 +242,7 @@ public sealed class FarmRotationWindow : Window
         _busy = true; _apply.IsEnabled = false; _applyMatching.IsEnabled = false; _fields.IsEnabled = false; _status.Text = "Applying the crop rotation…";
         try
         {
-            int count = await Task.Run(() => FarmCropEditor.ApplyBatchToGame(_farm, changes, CancellationToken.None));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => FarmCropEditor.ApplyBatchToGame(_farm, changes, CancellationToken.None)));
             MessageBox.Show(this, $"{count} crop rotation(s) passed memory readback. Check the fields in Ostriv; save there if they are correct.\n\nBackup: " + backup.Directory, "Rotation applied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

@@ -1,6 +1,13 @@
 using OstrivStudio.Core;
 using System.Buffers.Binary;
 
+if (args.Length == 2 && args[0] == "--game-write-probe")
+{
+    File.WriteAllText(args[1] + ".ready", "ready");
+    GameWriteCoordinator.Run(() => { File.WriteAllText(args[1] + ".entered", "entered"); return true; });
+    return;
+}
+
 static void Check(bool condition, string message) { if (!condition) throw new Exception(message); Console.WriteLine("PASS " + message); }
 static void Throws<T>(Action action, string message) where T : Exception
 {
@@ -33,6 +40,7 @@ TradeDealReaderTests.Run();
 LiveRuleTests.Run();
 ResourceInsightsTests.Run();
 await ExistingRuleAutomationTests.Run();
+await BackupRetryTests.Run();
 byte[] resource = new byte[20];
 BinaryPrimitives.WriteInt32LittleEndian(resource, 6);
 BinaryPrimitives.WriteInt32LittleEndian(resource.AsSpan(4), BitConverter.SingleToInt32Bits(1250.5f));
@@ -72,6 +80,13 @@ Check(BuildingDiscovery.FindExactVtable(uiImage, 0x140000000UL, "uiDealList") is
 
 if (args.Length != 1) throw new Exception("Expected an isolated test directory path.");
 var dir = Path.GetFullPath(args[0]); Directory.CreateDirectory(dir);
+await GameWriteCoordinatorTests.Run(dir);
+var controlPath = Path.Combine(dir, "automation-control.json");
+Check(AutomationControlStore.Load(controlPath), "automation defaults to enabled when the master switch has not been set");
+AutomationControlStore.Save(controlPath, false);
+Check(!AutomationControlStore.Load(controlPath), "the master automation switch remains off after reopening");
+AutomationControlStore.Save(controlPath, true);
+Check(AutomationControlStore.Load(controlPath), "the master automation switch can be re-enabled");
 var path = Path.Combine(dir, "profiles.json");
 Check(!File.Exists(path), "isolated test profile does not already exist");
 var saveSource = Path.Combine(dir, "source.save");

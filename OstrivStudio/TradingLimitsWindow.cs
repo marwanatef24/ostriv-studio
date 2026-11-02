@@ -113,9 +113,9 @@ public sealed class TradingLimitsWindow : Window
         _busy = true; _apply.IsEnabled = false; _resource.IsEnabled = false; _amount.IsEnabled = false; _mode.IsEnabled = false; _status.Text = "Applying export targets…";
         try
         {
-            int count = await Task.Run(() => reviewed.Add
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => reviewed.Add
                 ? TradingStockLimits.ApplyIncrementToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None)
-                : TradingStockLimits.ApplyToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None, _requiredDeal));
+                : TradingStockLimits.ApplyToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None, _requiredDeal)));
             MessageBox.Show(this, $"{count} export target(s) passed memory readback. Close and reopen the trading-building panel in Ostriv to refresh it, then save there if correct.\n\nBackup: {backup.Directory}", "Export targets increased", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

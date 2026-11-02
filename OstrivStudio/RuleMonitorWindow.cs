@@ -24,14 +24,22 @@ public sealed class RuleMonitorWindow : Window
     private TaskCompletionSource<bool>? _stopped;
     private bool _runningRules, _startingRules;
     private bool _startAfterFirstScan = true;
-    private bool _closed, _closeRequested;
+    private bool _closed, _closeRequested, _stopRequested, _allowClose;
+    private readonly bool _background;
+    private TaskCompletionSource<bool>? _startupFinished;
+    private readonly CancellationTokenSource _shutdown = new();
     private RuleMonitorReport? _reviewedReport;
     private byte[]? _reviewedSettingsHash;
     public bool MayHaveWritten { get; private set; }
+    public bool IsRunning => _runningRules;
+    public string Status => _status.Text;
+    public event Action? StatusChanged;
+    public event Action? StopRequested;
+    public event Action? WriteStarting;
 
-    public RuleMonitorWindow(string settingsPath, string profile, string gamePath, IReadOnlyDictionary<int, string> resources)
+    public RuleMonitorWindow(string settingsPath, string profile, string gamePath, IReadOnlyDictionary<int, string> resources, bool background = false)
     {
-        _settingsPath = settingsPath; _profile = profile; _gamePath = gamePath; _resources = resources;
+        _settingsPath = settingsPath; _profile = profile; _gamePath = gamePath; _resources = resources; _background = background;
         Title = "Start saved rules"; Width = 1180; Height = 690; MinWidth = 850; MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9"));
@@ -54,11 +62,12 @@ public sealed class RuleMonitorWindow : Window
         _grid.Columns.Add(Column("State", nameof(DisplayRow.State), 1.4));
         _grid.Columns.Add(Column("Details", nameof(DisplayRow.Detail), 2.8));
         root.Children.Add(_grid); Content = root;
-        _start.Click += async (_, _) => await StartAsync();
-        _stop.Click += (_, _) => _cancellation?.Cancel();
+        _start.Click += async (_, _) => { _startAfterFirstScan = true; await StartAsync(); };
+        _stop.Click += async (_, _) => { if (StopRequested is not null) StopRequested(); else await ShutdownAsync(); };
         _runRules.Click += async (_, _) => await StartRulesAsync();
         Closing += (_, e) =>
         {
+            if (_background && !_allowClose) { e.Cancel = true; Hide(); return; }
             if (_cancellation is not null)
             {
                 e.Cancel = true; _closeRequested = true; _cancellation.Cancel();
@@ -66,7 +75,20 @@ public sealed class RuleMonitorWindow : Window
             }
             else _closed = true;
         };
-        Loaded += async (_, _) => await StartAsync();
+        Loaded += async (_, _) => { if (_background) Hide(); await StartAsync(); };
+    }
+
+    private void SetStatus(string value) { _status.Text = value; StatusChanged?.Invoke(); }
+
+    public async Task ShutdownAsync()
+    {
+        _stopRequested = true; _startAfterFirstScan = false; _shutdown.Cancel();
+        _cancellation?.Cancel();
+        var startup = _startupFinished;
+        var stopped = _stopped;
+        if (startup is not null) await startup.Task;
+        else if (stopped is not null) await stopped.Task;
+        if (!_closed) { _allowClose = true; Close(); }
     }
 
     private static DataGridTextColumn Column(string title, string property, double width) =>
@@ -81,8 +103,10 @@ public sealed class RuleMonitorWindow : Window
 
     private async Task StartRulesAsync()
     {
-        if (_startingRules) return;
+        if (_startingRules || _stopRequested) return;
         _startingRules = true;
+        var startup = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _startupFinished = startup;
         try
         {
         if (_cancellation is not null)
@@ -91,46 +115,51 @@ public sealed class RuleMonitorWindow : Window
             var stopped = _stopped;
             _cancellation.Cancel();
             if (stopped is not null) await stopped.Task;
-            if (_closed || _closeRequested) return;
+            if (_closed || _closeRequested || _stopRequested) return;
         }
         if (_reviewedReport is null || _reviewedSettingsHash is null)
-        { MessageBox.Show(this, "Complete and review a read-only scan first.", "Automation", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        { SetStatus("Automation stopped: a complete game scan is required."); return; }
         try
         {
             if (!_reviewedSettingsHash.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
                 throw new InvalidOperationException("The profile changed after the scan. Monitor the saved rules again.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
-        { MessageBox.Show(this, ex.Message, "Automation", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        { SetStatus("Automation stopped: " + ex.Message); return; }
         _start.IsEnabled = false;
         _runRules.IsEnabled = false;
-        _status.Text = "Backing up your existing saves automatically…";
-        SaveBackup.SaveDirectoryBackup backup;
+        SetStatus("Backing up your existing saves automatically…");
+        SaveBackup.SaveDirectoryBackup? backup = null;
         try
         {
             string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
             string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
-            backup = await Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups")));
+            backup = await BackupRetry.RunAsync(
+                () => Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups"))),
+                _ => Dispatcher.Invoke(() => SetStatus("A save changed during backup. Retrying automatically…")),
+                Task.Delay, _shutdown.Token);
         }
+        catch (OperationCanceledException) { return; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         {
-            if (!_closed) _status.Text = "Automation did not start because the saves could not be backed up: " + ex.Message;
+            if (!_closed) SetStatus("Automation did not start because the saves could not be backed up: " + ex.Message);
             return;
         }
-        if (_closed || _closeRequested) return;
+        if (_closed || _closeRequested || _stopRequested || backup is null) return;
         try
         {
             if (!_reviewedSettingsHash.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
-            { _status.Text = "Your profile changed during backup. Check the rules again to start."; return; }
+            { SetStatus("Automation stopped: your profile changed during backup. Check the rules again to start."); return; }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { _status.Text = "Automation did not start because the profile could not be checked: " + ex.Message; return; }
+        { SetStatus("Automation did not start because the profile could not be checked: " + ex.Message); return; }
         MayHaveWritten = true;
         await StartAsync(true, backup.Directory);
         }
         finally
         {
             _startingRules = false;
+            _startupFinished = null; startup.TrySetResult(true);
             if (!_closed && _cancellation is null)
             { _start.IsEnabled = true; _runRules.IsEnabled = _reviewedReport is not null && _reviewedSettingsHash is not null; }
         }
@@ -138,22 +167,25 @@ public sealed class RuleMonitorWindow : Window
 
     private async Task StartAsync(bool runRules = false, string? backupDirectory = null)
     {
-        if (_cancellation is not null) return;
+        if (_cancellation is not null || _stopRequested) return;
         var cts = new CancellationTokenSource(); _cancellation = cts; _runningRules = runRules;
         var stopped = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously); _stopped = stopped;
         _start.IsEnabled = false; _runRules.IsEnabled = false; _stop.IsEnabled = true;
         _description.Text = runRules
-            ? "EXPERIMENTAL AUTOMATION · The game briefly pauses for each edit. Avoid changing speed while an edit is in progress; closing this window stops the runner."
+            ? (_background ? "AUTOMATION ON · The game briefly pauses during an edit. Close this window to return to the editor; use Stop to pause automation." : "EXPERIMENTAL AUTOMATION · The game briefly pauses for each edit. Avoid changing speed while an edit is in progress; closing this window stops the runner.")
             : "Checking your saved rules. Your existing saves are backed up automatically before automation starts.";
-        _status.Text = "Scanning the running game. This can take a little while…";
+        SetStatus("Scanning the running game. This can take a little while…");
         byte[]? profileHashAtScan = null;
+        bool settlementDetected = false;
         var progress = new Progress<RuleMonitorReport>(report =>
         {
             if (_closed || !ReferenceEquals(_cancellation, cts) || cts.IsCancellationRequested) return;
             _reviewedReport = report; _reviewedSettingsHash = profileHashAtScan?.ToArray();
             ShowRows(report, null);
+            if (!settlementDetected)
+            { _runRules.IsEnabled = false; SetStatus("Waiting for a settlement to load in Ostriv…"); return; }
             _runRules.IsEnabled = _reviewedSettingsHash is not null;
-            _status.Text = $"Found {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s). Preparing automation…";
+            SetStatus($"Found {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s). Preparing automation…");
             if (_startAfterFirstScan && _runRules.IsEnabled)
             {
                 _startAfterFirstScan = false;
@@ -165,7 +197,7 @@ public sealed class RuleMonitorWindow : Window
             if (_closed || !ReferenceEquals(_cancellation, cts)) return;
             ShowRows(tick.BeforeEdit, tick);
             string skipped = tick.Skipped.Count == 0 ? "None skipped." : $"Skipped: {string.Join("; ", tick.Skipped.Take(3))}" + (tick.Skipped.Count > 3 ? $"; +{tick.Skipped.Count - 3} more" : "");
-            _status.Text = $"Checked {tick.BeforeEdit.Rows.Count} resource and {tick.BeforeEdit.CapacityRows.Count} capacity rules at {tick.BeforeEdit.ObservedUtc.ToLocalTime():T}; applied {tick.Applied} resource and {tick.CapacityApplied} capacity change(s). {skipped} Values are from before edits. Backup: {backupDirectory}";
+            SetStatus($"Checked {tick.BeforeEdit.Rows.Count} resource and {tick.BeforeEdit.CapacityRows.Count} capacity rules at {tick.BeforeEdit.ObservedUtc.ToLocalTime():T}; applied {tick.Applied} resource and {tick.CapacityApplied} capacity change(s). {skipped} Values are from before edits. Backup: {backupDirectory}");
         });
         void ShowRows(RuleMonitorReport report, ExistingRuleTick? tick)
         {
@@ -197,6 +229,7 @@ public sealed class RuleMonitorWindow : Window
                     !string.Equals(Path.GetFullPath(savedPath), Path.GetFullPath(_gamePath), StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("The selected profile or game location changed; start monitoring again.");
                 var scan = LiveBuildingScanner.Scan(_gamePath, token);
+                settlementDetected = scan.Buildings.Count > 0;
                 if (!before.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
                     throw new InvalidOperationException("Profile settings changed while scanning; restart with the saved rules.");
                 if (runRules)
@@ -212,10 +245,17 @@ public sealed class RuleMonitorWindow : Window
                 await ExistingRuleAutomation.RunAsync(Read,
                     (profile, scan, token) => Task.Run(() =>
                     {
-                        if (profileHashAtScan is null || !profileHashAtScan.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
-                            throw new InvalidOperationException("Profile settings changed before the edit; no write was attempted.");
-                        Dispatcher.Invoke(() => _status.Text = "Applying rules · do not change the game speed or pause control…");
-                        return LiveRuleExecutor.ApplyToGame(profile, scan, token);
+                        Dispatcher.Invoke(() => { SetStatus("Applying rules · do not change the game speed or pause control…"); WriteStarting?.Invoke(); });
+                        return GameWriteCoordinator.Run(() =>
+                        {
+                            void CheckSettings()
+                            {
+                                if (profileHashAtScan is null || !profileHashAtScan.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
+                                    throw new InvalidOperationException("Profile settings changed before the edit; no write was attempted.");
+                            }
+                            CheckSettings();
+                            return LiveRuleExecutor.ApplyToGame(profile, scan, token, _ => CheckSettings());
+                        }, token);
                     }, token),
                     tick => ((IProgress<ExistingRuleTick>)ruleProgress).Report(tick), Task.Delay, cts.Token,
                     (capacityPlan, scan, token) => Task.Run(() =>
@@ -225,23 +265,23 @@ public sealed class RuleMonitorWindow : Window
                             if (profileHashAtScan is null || !profileHashAtScan.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
                                 throw new InvalidOperationException("Profile settings changed before the capacity edit.");
                         }
-                        CheckSettings();
-                        Dispatcher.Invoke(() => _status.Text = "Applying capacity rules · do not change the game speed or pause control…");
-                        return CapacityRulePlanner.ApplyToGame(capacityPlan, scan, token, CheckSettings);
+                        Dispatcher.Invoke(() => { SetStatus("Applying capacity rules · do not change the game speed or pause control…"); WriteStarting?.Invoke(); });
+                        return GameWriteCoordinator.Run(() => { CheckSettings(); return CapacityRulePlanner.ApplyToGame(capacityPlan, scan, token, CheckSettings); }, token);
                     }, token));
             else
                 await RuleMonitor.RunAsync(async token => { var (scan, document) = await Read(token); return (scan, document.AutomationProfiles[_profile]); },
                     report => ((IProgress<RuleMonitorReport>)progress).Report(report), Task.Delay, cts.Token);
         }
-        catch (OperationCanceledException) { if (!_closed) _status.Text = runRules ? "Automation stopped. Check Ostriv before saving." : "Monitoring stopped. No game changes were made."; }
+        catch (OperationCanceledException) { if (!_closed) SetStatus(runRules ? "Automation stopped. Check Ostriv before saving." : "Monitoring stopped. No game changes were made."); }
         catch (Exception ex)
         {
             if (!runRules) { _reviewedReport = null; _reviewedSettingsHash = null; }
-            if (!_closed) _status.Text = runRules ? "Automation stopped. A write may be partial; reload the backup without saving if uncertain. " + ex.Message + " Backup: " + backupDirectory : "Rule check stopped: " + ex.Message;
+            if (!_closed) SetStatus(runRules ? "Automation stopped. A write may be partial; reload the backup without saving if uncertain. " + ex.Message + " Backup: " + backupDirectory : "Rule check stopped: " + ex.Message);
         }
         finally
         {
             cts.Dispose(); _cancellation = null; _runningRules = false; _stopped = null; stopped.TrySetResult(true);
+            StatusChanged?.Invoke();
             if (runRules) { _reviewedReport = null; _reviewedSettingsHash = null; }
             if (_closeRequested && !_closed) { _closeRequested = false; Close(); }
             if (!_closed) { _start.IsEnabled = true; _runRules.IsEnabled = _reviewedReport is not null && _reviewedSettingsHash is not null; _stop.IsEnabled = false; }

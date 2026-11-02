@@ -149,6 +149,12 @@ public partial class MainWindow : Window
     private void MonitorRules_Click(object sender, RoutedEventArgs e)
     {
         if (!_settingsAvailable || !SavePending()) return;
+        if (Owner is BuildingWindow workspace)
+        {
+            Close();
+            Dispatcher.BeginInvoke(new Action(workspace.ShowAutomationMonitor));
+            return;
+        }
         if (!File.Exists(_state.GamePath))
         { MessageBox.Show(this, "Choose the installed Ostriv executable first.", "Monitor saved rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
         var names = _catalog.ToDictionary(item => item.Key, item => item.Value.Name.StartsWith("RES_", StringComparison.Ordinal)

@@ -121,6 +121,10 @@ public static class LiveBuildingScanner
                 tables.Add(moduleBase + item.Key, item.Value);
         }
         if (tables.Count == 0) throw new InvalidDataException("Live class tables did not match the game image.");
+        // Almost every aligned word in private game memory is not a class
+        // table. Reject values outside the actual table range before hashing.
+        // This keeps the complete scan and all existing verification intact.
+        ulong minTable = tables.Keys.Min(), maxTable = tables.Keys.Max();
         var hits = new Dictionary<ulong, string>();
         long scanned = 0, lastReported = 0; int failures = 0; bool complete = true; ulong cursor = 0;
         GetNativeSystemInfo(out var system);
@@ -149,7 +153,8 @@ public static class LiveBuildingScanner
                     for (int i = 0; i <= count - 8; i += 8)
                     {
                         ulong value = BinaryPrimitives.ReadUInt64LittleEndian(buffer.AsSpan(i, 8));
-                        if (tables.TryGetValue(value, out var name)) hits.TryAdd(start + off + (uint)i, name);
+                        if (value < minTable || value > maxTable || !tables.TryGetValue(value, out var name)) continue;
+                        hits.TryAdd(start + off + (uint)i, name);
                         if (hits.Count >= 10000) { complete = false; break; }
                     }
                     if (scanned - lastReported >= 64L * 1024 * 1024) { progress?.Report(scanned); lastReported = scanned; }
