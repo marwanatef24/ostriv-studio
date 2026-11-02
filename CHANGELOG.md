@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.9 — simpler resource actions and automation startup
+
+- Enter amounts and choose Add, Raise, or Keep directly beside each resource in the building table.
+- Starting saved rules and applying one-time stock changes automatically backs up existing saves instead of asking for a save file. Unsaved game progress is not included in those backups.
+- Across-building rule checks now explain missing or fractional records that the writer cannot handle.
+- Automation still requires starting its monitor and stops when the candidate set changes; support remains limited to verified combinations.
+- A live test of an isolated copy of the 17-rule profile applied 10 resource changes on its first cycle and four on the next; Ostriv displayed the well's 5,000 water target. Long-term stability and unverified game versions remain untested.
+
 ## 0.2.8 — target quantities and bulk export additions
 
 - Raise an existing supported resource to a chosen minimum once across selected buildings; quantities already above it remain unchanged.

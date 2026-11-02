@@ -86,6 +86,14 @@ public static class RuleMonitor
             }
             if (rule.Mode == MaintenanceMode.Across)
             {
+                // Use the same preflight as the writer: a combined total alone
+                // cannot show whether every building has an editable record.
+                var across = AcrossRulePlanner.Create(rule, matches);
+                if (across.Unsupported is not null)
+                {
+                    rows.Add(Row(matches.Length, total, "Not supported", across.Unsupported));
+                    continue;
+                }
                 bool needsIncrease = total < rule.Target;
                 rows.Add(Row(matches.Length, total, needsIncrease ? "Below target" : "At or above target",
                     "Across shares a combined shortfall between existing whole-unit records on supported buildings; other cases are skipped."));

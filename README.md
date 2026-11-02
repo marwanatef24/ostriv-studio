@@ -16,18 +16,18 @@ The installer includes the Windows x64 runtime. Installed copies check for updat
 
 Search the building list by building or stock name. Each row summarizes its observed stored resources; select a row to inspect its inventory and stock mix. Use **All**, **Same type**, Ctrl-click or Shift-click to select several candidates. The stock mix shows the largest observed resources for the selected building, as shares of its observed stored stock. Candidate labels and amounts are snapshots, not persistent in-game building identifiers; verify them against Ostriv before a write and scan again after loading a settlement.
 
-- Choose **Add once**, enter the amount on the building screen, and review a positive addition to an existing supported stored resource in each selected building. It does not create a saved rule or add a missing stock entry.
-- Choose **Raise to** to increase each selected building to a chosen minimum once; buildings already at or above it are left unchanged. This does not lower existing stock or create a rule.
-- Choose **Keep stocked**, enter a quantity, and save a minimum in the selected profile. A rule applies to matching buildings of the chosen type; it is not pinned to a particular building instance.
+- Enter an amount beside a resource and choose **Add** to review a positive addition to an existing supported stored resource in each selected building. It does not create a saved rule or add a missing stock entry.
+- Choose **Raise** to increase each selected building to a chosen minimum once; buildings already at or above it are left unchanged. This does not lower existing stock or create a rule.
+- Choose **Keep** to save a minimum in the selected profile. A rule applies to matching buildings of the chosen type; it is not pinned to a particular building instance.
 - **Resource overview** shows the observed stock breakdown, session history and CSV export. Candidate totals can overlap and need not match the town total.
 
-Before a write, choose the currently loaded save. The app copies and verifies it and the autosaves into a backup folder and asks you to check the selected candidates. It cannot prove that the selected save is the one currently loaded. If a batch reports a partial or uncertain write, do not save the game; close Ostriv and restore the backup. Ostriv can autosave even while paused.
+Before a one-time stock edit or automation starts, the app automatically copies and verifies the existing saves in Ostriv's standard save folder. The backup does not include unsaved changes in the running game. Other editing tools may still ask you to choose a save. If a batch reports a partial or uncertain write, do not save the game; close Ostriv and restore the backup. Ostriv can autosave even while paused.
 
 ## Saved rules and capacity
 
 Open **Saved rules** to create or import a profile. Choose **Each building** to maintain a minimum separately in each matching building, or **Across buildings** to maintain one combined minimum for supported existing stock. Profiles, enabled switches, capacity settings and intervals persist when the editor is reopened; they do not store process addresses.
 
-Choose **Start saved rules**. After the scan, select the loaded save for backup and confirm to start the runner; cancel to make no edits. Supported stock and capacity rules are reapplied while that monitor remains open. Capacity minimums currently cover granaries, warehouses and big hay barracks. Capacity can reset when the game reloads: scan, review and start the monitor again after loading. Automation does not start on its own when the editor opens, and it stops when the game session or candidate set changes, a scan is incomplete, or a write fails. Unsupported rules are reported as skipped.
+Choose **Start saved rules**. The app scans and backs up saves automatically, then starts supported stock and capacity rules while the monitor remains open. Capacity minimums currently cover granaries, warehouses and big hay barracks. Capacity can reset when the game reloads: start the monitor again after loading. Automation does not start on its own when the editor opens, and it stops when the game session or candidate set changes, a scan is incomplete, or a write fails. Unsupported rules are reported as skipped.
 
 Profiles live at `%LOCALAPPDATA%\OstrivStudio\profiles.json`. The optional `OSTRIV_STUDIO_DATA_DIR` environment variable changes that directory. **Import original rules…** copies supported rules from the original editor's `.userpref` file into a new profile without changing the source. Close the original editor before importing where possible; other preferences are not imported.
 

@@ -92,7 +92,7 @@
         <Grid Margin="18"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
           <StackPanel><TextBlock x:Name="SelectedTitle" Text="Choose a building" FontSize="22" FontWeight="SemiBold"/><TextBlock x:Name="SelectedSubtitle" Text="Its stock and available controls will appear here." Foreground="#6B7C71" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/></StackPanel>
           <Grid Grid.Row="1" Margin="0,17,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
-            <StackPanel VerticalAlignment="Center"><TextBlock Text="Resources" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Select a resource to edit" FontSize="11" Foreground="#718276" Margin="0,3,0,0"/></StackPanel>
+            <StackPanel VerticalAlignment="Center"><TextBlock Text="Resources" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Enter an amount, then choose an action. Grey actions are not yet supported." TextWrapping="Wrap" FontSize="11" Foreground="#718276" Margin="0,3,0,0"/></StackPanel>
             <Grid Grid.Column="1"><TextBox x:Name="ResourceSearch" TextChanged="ResourceSearch_Changed" Padding="9,7"/><TextBlock x:Name="ResourceSearchHint" Text="Search resources" Foreground="#85968B" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/></Grid>
           </Grid>
           <Border Grid.Row="2" x:Name="StockMixPanel" Visibility="Collapsed" Background="#F3F7F3" CornerRadius="6" Padding="10" Margin="0,0,0,9">
@@ -102,11 +102,26 @@
               </ItemsControl>
             </StackPanel>
           </Border>
-          <DataGrid Grid.Row="3" x:Name="LiveResourceGrid" CellStyle="{StaticResource PanelCell}" Background="White" Foreground="#20312D" RowBackground="White" AlternatingRowBackground="#F7F9F6" BorderThickness="0" GridLinesVisibility="None" RowHeight="42" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed">
+          <DataGrid Grid.Row="3" x:Name="LiveResourceGrid" CellStyle="{StaticResource PanelCell}" Background="White" Foreground="#20312D" RowBackground="White" AlternatingRowBackground="#F7F9F6" BorderThickness="0" GridLinesVisibility="None" RowHeight="50" CanUserAddRows="False" IsReadOnly="True" AutoGenerateColumns="False" SelectionMode="Single" SelectionChanged="ResourceSelection_Changed" HorizontalScrollBarVisibility="Auto">
             <DataGrid.ColumnHeaderStyle><Style TargetType="DataGridColumnHeader"><Setter Property="Background" Value="#EFF4EF"/><Setter Property="Foreground" Value="#607769"/><Setter Property="Padding" Value="10,8"/><Setter Property="BorderThickness" Value="0"/></Style></DataGrid.ColumnHeaderStyle>
-            <DataGrid.Columns><DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="2*"/><DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="*"/><DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="*"/><DataGridTextColumn Header="Awaited" Binding="{Binding Awaited}" Width="*"/></DataGrid.Columns>
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Resource" Binding="{Binding Name}" Width="*" MinWidth="115"/>
+              <DataGridTextColumn Header="Stored" Binding="{Binding Stored}" Width="65"/>
+              <DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" Width="75"/>
+              <DataGridTextColumn Header="Awaited" Binding="{Binding Awaited}" Width="70"/>
+              <DataGridTemplateColumn Header="Amount" Width="90"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+                <TextBox Text="{Binding Amount, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" Padding="6,5" VerticalContentAlignment="Center" AutomationProperties.Name="Amount" ToolTip="Enter a quantity for this resource"/>
+              </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+              <DataGridTemplateColumn Header="Actions" Width="210"><DataGridTemplateColumn.CellTemplate><DataTemplate>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                  <Button Content="Add" Tag="add" Click="ResourceRowAction_Click" IsEnabled="{Binding CanEdit}" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,4,0" ToolTip="Add this amount once to each selected building" ToolTipService.ShowOnDisabled="True"/>
+                  <Button Content="Raise" Tag="raise" Click="ResourceRowAction_Click" IsEnabled="{Binding CanEdit}" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,4,0" ToolTip="Increase each selected building to at least this amount once; higher quantities stay unchanged" ToolTipService.ShowOnDisabled="True"/>
+                  <Button Content="Keep" Tag="keep" Click="ResourceRowAction_Click" IsEnabled="{Binding CanKeep}" Style="{StaticResource WorkButton}" Padding="7,5" Background="#E5F3EA" ToolTip="Save a minimum rule for every matching building of this type" ToolTipService.ShowOnDisabled="True"/>
+                </StackPanel>
+              </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+            </DataGrid.Columns>
           </DataGrid>
-          <Border Grid.Row="4" Background="#F3F7F3" BorderBrush="#DDE8DE" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,12,0,0"><StackPanel>
+          <Border Grid.Row="4" Visibility="Collapsed" Background="#F3F7F3" BorderBrush="#DDE8DE" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,12,0,0"><StackPanel>
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Edit selected resource" FontSize="15" FontWeight="SemiBold"/><TextBlock Grid.Column="1" x:Name="ActionResource" Text="Select a resource above" Foreground="#688071" FontSize="11" VerticalAlignment="Center"/></Grid>
             <Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <RadioButton x:Name="AddIntent" GroupName="ResourceAction" Content="Add once" Tag="Add this amount" Style="{StaticResource ActionChoice}" IsChecked="True" Checked="ActionIntent_Changed" Margin="0,0,4,0"/>

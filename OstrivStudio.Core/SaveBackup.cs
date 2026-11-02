@@ -7,6 +7,7 @@ public static class SaveBackup
 {
     public sealed record BackupFile(string Original, string Copy);
     public sealed record SessionBackup(string Directory, string SelectedCopy, IReadOnlyList<BackupFile> Autosaves);
+    public sealed record SaveDirectoryBackup(string Directory, string SourceDirectory, IReadOnlyList<BackupFile> Files);
     private static byte[] Hash(string path)
     {
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -50,6 +51,63 @@ public static class SaveBackup
             throw new IOException("The selected save or autosaves changed during backup. No edit was made; try again.");
         var result = new SessionBackup(session, selectedCopy, copies.AsReadOnly());
         File.WriteAllText(Path.Combine(session, "backup-manifest.json"), JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
+        return result;
+    }
+
+    // A loaded save cannot be inferred reliably from game memory. Capture all
+    // top-level saves instead; the manifest retains the exact original names.
+    // This cannot capture unsaved state in the running game's memory.
+    public static SaveDirectoryBackup CopyAllSavesVerified(string saveDirectory, string directory)
+    {
+        string sourceDir = Path.GetFullPath(saveDirectory);
+        string backupRoot = Path.GetFullPath(directory);
+        if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("The Ostriv save folder was not found.");
+        string sourcePrefix = Path.TrimEndingDirectorySeparator(sourceDir) + Path.DirectorySeparatorChar;
+        string backupPrefix = Path.TrimEndingDirectorySeparator(backupRoot) + Path.DirectorySeparatorChar;
+        if (string.Equals(sourcePrefix, backupPrefix, StringComparison.OrdinalIgnoreCase) ||
+            backupPrefix.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("The backup folder must be outside the Ostriv save folder.");
+
+        static string[] SaveFiles(string folder)
+        {
+            var files = Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
+                .Where(path => string.Equals(Path.GetExtension(path), ".save", StringComparison.OrdinalIgnoreCase))
+                .Select(Path.GetFullPath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).Take(1001).ToArray();
+            if (files.Length == 0) throw new InvalidDataException("No Ostriv save files were found. Save the game first to create a recovery point.");
+            if (files.Length > 1000) throw new InvalidDataException("There are too many save files to back up safely.");
+            return files;
+        }
+
+        string[] originals = SaveFiles(sourceDir);
+        var hashes = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (string original in originals)
+        {
+            var info = new FileInfo(original);
+            if (!info.Exists || info.Length <= 0 || info.Length > 128 * 1024 * 1024)
+                throw new InvalidDataException("A save has an unsupported size. No game edit was made.");
+            hashes.Add(original, Hash(original));
+        }
+
+        string session = Path.Combine(backupRoot, $"session-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
+        var copies = new List<BackupFile>(originals.Length);
+        foreach (string original in originals) copies.Add(new(original, CopyVerified(original, session)));
+
+        void VerifyAll()
+        {
+            if (!originals.SequenceEqual(SaveFiles(sourceDir), StringComparer.OrdinalIgnoreCase) ||
+                copies.Any(file => !hashes[file.Original].AsSpan().SequenceEqual(Hash(file.Original)) ||
+                    !hashes[file.Original].AsSpan().SequenceEqual(Hash(file.Copy))))
+                throw new IOException("The save files changed during backup. No game edit was made; try again.");
+        }
+        VerifyAll();
+        var result = new SaveDirectoryBackup(session, sourceDir, copies.AsReadOnly());
+        byte[] manifest = JsonSerializer.SerializeToUtf8Bytes(result, new JsonSerializerOptions { WriteIndented = true });
+        string stagedManifest = Path.Combine(session, "backup-manifest.partial");
+        using (var output = new FileStream(stagedManifest, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+        { output.Write(manifest); output.Flush(true); }
+        if (!manifest.AsSpan().SequenceEqual(File.ReadAllBytes(stagedManifest))) throw new IOException("The backup manifest could not be verified. No game edit was made.");
+        VerifyAll();
+        File.Move(stagedManifest, Path.Combine(session, "backup-manifest.json"));
         return result;
     }
 }

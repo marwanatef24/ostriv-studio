@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -23,7 +22,7 @@ public sealed class RuleMonitorWindow : Window
     private readonly Button _runRules = new() { Content = "Start automation…", MinWidth = 180, Margin = new Thickness(8, 0, 0, 0), IsEnabled = false, Background = new SolidColorBrush(Color.FromRgb(34, 109, 83)), Foreground = Brushes.White };
     private CancellationTokenSource? _cancellation;
     private TaskCompletionSource<bool>? _stopped;
-    private bool _runningRules;
+    private bool _runningRules, _startingRules;
     private bool _startAfterFirstScan = true;
     private bool _closed, _closeRequested;
     private RuleMonitorReport? _reviewedReport;
@@ -41,7 +40,7 @@ public sealed class RuleMonitorWindow : Window
         var header = new StackPanel();
         header.Children.Add(new TextBlock { Text = "Start saved rules", FontFamily = new FontFamily("Georgia"), FontSize = 29 });
         header.Children.Add(new TextBlock { Text = $"Profile: {_profile}", Margin = new Thickness(0, 5, 0, 5), Foreground = new SolidColorBrush(Color.FromRgb(139, 77, 18)) });
-        _description.Text = "CHECKING ONLY · No quantities change yet. After the scan, choose your loaded save for backup and confirm to start automation. Leave this window open while you play.";
+        _description.Text = "Starting your saved rules. Your existing saves are backed up automatically before changes begin. Leave this window open while you play.";
         header.Children.Add(_description);
         header.Children.Add(_status); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
@@ -82,6 +81,10 @@ public sealed class RuleMonitorWindow : Window
 
     private async Task StartRulesAsync()
     {
+        if (_startingRules) return;
+        _startingRules = true;
+        try
+        {
         if (_cancellation is not null)
         {
             if (_runningRules) return;
@@ -99,23 +102,38 @@ public sealed class RuleMonitorWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         { MessageBox.Show(this, ex.Message, "Automation", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        _status.Text = "Choose the loaded save for backup, then confirm to start automation.";
-        if (select.ShowDialog(this) != true) { _status.Text = "Automation was not started. Choose Start automation to try again."; return; }
-        SaveBackup.SessionBackup backup;
+        _start.IsEnabled = false;
+        _runRules.IsEnabled = false;
+        _status.Text = "Backing up your existing saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
             string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
+            backup = await Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups")));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; automation did not start.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string pauseInstructions = "The editor will briefly pause the simulation during each edit, then restore its previous speed. Do not use the game's pause or speed controls during an edit.";
-        string prompt = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs the selected save loaded, and do the reviewed candidates match the buildings in your settlement? {pauseInstructions}\n\nEnabled Each and Across rules can increase stored resources in matching camp storage, granary, well, stone mining camp, warehouse, trading post and fishing dock candidates, plus existing trading-dock broadcloth or clothes, ashery potash and brickworks brick. Across rules share a combined shortfall and require an existing whole-unit record in every matching candidate. Each rules can add selected nonperishable resources in verified spare slots; trading and industrial insertion are not supported. Enabled capacity rules can increase granary, warehouse and big hay barrack capacity while the monitor runs. Limited selections and other building classes may be skipped. Camp edits need an anchor: an existing stock of 1,000 or a nonempty item with a rule that tops it up first.\n\nThis is experimental: candidates are not guaranteed to be live buildings, and Ostriv can autosave even while paused. Stop and reload the backup without saving if a write fails.";
-        if (MessageBox.Show(this, prompt, "Start experimental automation?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        {
+            if (!_closed) _status.Text = "Automation did not start because the saves could not be backed up: " + ex.Message;
+            return;
+        }
+        if (_closed || _closeRequested) return;
+        try
+        {
+            if (!_reviewedSettingsHash.AsSpan().SequenceEqual(SettingsHash(_settingsPath)))
+            { _status.Text = "Your profile changed during backup. Check the rules again to start."; return; }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { _status.Text = "Automation did not start because the profile could not be checked: " + ex.Message; return; }
         MayHaveWritten = true;
         await StartAsync(true, backup.Directory);
+        }
+        finally
+        {
+            _startingRules = false;
+            if (!_closed && _cancellation is null)
+            { _start.IsEnabled = true; _runRules.IsEnabled = _reviewedReport is not null && _reviewedSettingsHash is not null; }
+        }
     }
 
     private async Task StartAsync(bool runRules = false, string? backupDirectory = null)
@@ -126,7 +144,7 @@ public sealed class RuleMonitorWindow : Window
         _start.IsEnabled = false; _runRules.IsEnabled = false; _stop.IsEnabled = true;
         _description.Text = runRules
             ? "EXPERIMENTAL AUTOMATION · The game briefly pauses for each edit. Avoid changing speed while an edit is in progress; closing this window stops the runner."
-            : "CHECKING ONLY · No quantities change yet. After the scan, choose your loaded save for backup and confirm to start automation. Leave this window open while you play.";
+            : "Checking your saved rules. Your existing saves are backed up automatically before automation starts.";
         _status.Text = "Scanning the running game. This can take a little while…";
         byte[]? profileHashAtScan = null;
         var progress = new Progress<RuleMonitorReport>(report =>
@@ -135,7 +153,7 @@ public sealed class RuleMonitorWindow : Window
             _reviewedReport = report; _reviewedSettingsHash = profileHashAtScan?.ToArray();
             ShowRows(report, null);
             _runRules.IsEnabled = _reviewedSettingsHash is not null;
-            _status.Text = $"Check complete: {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s). Select Start automation to apply supported rules; checking alone does not edit the game.";
+            _status.Text = $"Found {report.Rows.Count} resource and {report.CapacityRows.Count} capacity rule(s). Preparing automation…";
             if (_startAfterFirstScan && _runRules.IsEnabled)
             {
                 _startAfterFirstScan = false;
