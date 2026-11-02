@@ -666,6 +666,17 @@ public partial class BuildingWindow : Window
             _automationMonitor = monitor; _automationSession = session;
             monitor.StatusChanged += UpdateAutomationDisplay;
             monitor.StopRequested += () => _ = SetAutomationEnabledAsync(false);
+            monitor.InitialScanReady += scan =>
+            {
+                // Only fill an empty workspace. Never replace an in-flight manual
+                // scan, an existing selection, or a result from another session.
+                if (_shuttingDown || !ReferenceEquals(_automationMonitor, monitor) || _snapshot is not null ||
+                    _scanCancellation is not null || _automationSession is not { } active ||
+                    scan.ProcessId != active.Id || scan.ProcessStartedUtc != active.Started || FindGameSession(_state.GamePath) != active ||
+                    !string.Equals(Path.GetFullPath(scan.GamePath), Path.GetFullPath(_state.GamePath), StringComparison.OrdinalIgnoreCase)) return;
+                AdoptScan(scan, DateTime.UtcNow);
+                BottomStatus.Text = "Buildings found automatically. Quantities are from this scan; edits check current game data.";
+            };
             monitor.WriteStarting += () =>
             {
                 if (_snapshot is null) return;

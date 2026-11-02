@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — automatically show buildings
+
+- When enabled saved rules start, their first complete settlement scan also fills the building list and selects a building. This avoids a separate Find scan; the current selection and manual scans are never replaced.
+- Tested with a running hotfix 58 settlement and an isolated profile copy: 226 building candidates appeared without pressing Find. Large settlements can still take several minutes to scan.
+- Building discovery still requires enabled automation rules for automatic startup; use Find when automation is off or no rules are enabled. Candidate changes can still stop automation.
+
 ## 0.3.0 — background automation
 
 - Enabled saved rules start in the background when the configured game is detected. The master on/off setting survives reopening, and the status window can be closed without stopping rules.
