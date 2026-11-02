@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -96,30 +95,25 @@ public sealed class TradingLimitsWindow : Window
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || _reviewed is not { } reviewed) return;
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        _busy = true; IsEnabled = false; _status.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _status.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no export target was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string change = reviewed.Add ? $"{reviewed.Target:N0} will be added to each existing target" : $"existing targets below {reviewed.Target:N0} will be raised";
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save, and do the listed candidates match your trading buildings? Ostriv will briefly pause while {change}. Avoid changing game speed during the edit.\n\nIf it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
-        if (MessageBox.Show(this, question, "Apply export targets?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        _busy = true; _apply.IsEnabled = false; _resource.IsEnabled = false; _amount.IsEnabled = false; _mode.IsEnabled = false; _status.Text = "Applying export targets…";
+        { _busy = false; IsEnabled = true; _status.Text = "Backup failed; no export target was changed. " + ex.Message; return; }
+        _apply.IsEnabled = false; _resource.IsEnabled = false; _amount.IsEnabled = false; _mode.IsEnabled = false; _status.Text = "Applying export targets…";
         try
         {
             int count = await Task.Run(() => GameWriteCoordinator.Run(() => reviewed.Add
                 ? TradingStockLimits.ApplyIncrementToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None)
                 : TradingStockLimits.ApplyToGame(_snapshot, reviewed.Resource, reviewed.Target, CancellationToken.None, _requiredDeal)));
+            IsEnabled = true;
             MessageBox.Show(this, $"{count} export target(s) passed memory readback. Close and reopen the trading-building panel in Ostriv to refresh it, then save there if correct.\n\nBackup: {backup.Directory}", "Export targets increased", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
-        { MessageBox.Show(this, "The export-target action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Export targets stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _busy = false; _invalidate(); Close(); }
+        { IsEnabled = true; MessageBox.Show(this, "The export-target action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Export targets stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { _busy = false; IsEnabled = true; _invalidate(); Close(); }
     }
 }

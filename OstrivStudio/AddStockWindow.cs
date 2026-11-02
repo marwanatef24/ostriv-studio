@@ -16,6 +16,7 @@ public sealed class AddStockWindow : Window
     private readonly LiveResourceRow _resource;
     private readonly Action _invalidate;
     private readonly bool _raiseTo;
+    private readonly bool _setExact;
     private readonly TextBox _amount = new() { Width = 180, Margin = new Thickness(0, 0, 10, 0) };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 8), Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)) };
     private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, Margin = new Thickness(0, 14, 0, 14) };
@@ -23,32 +24,33 @@ public sealed class AddStockWindow : Window
     private decimal? _reviewedAmount;
     private bool _busy;
 
-    public AddStockWindow(DiscoveryResult scan, BuildingRow[] buildings, LiveResourceRow resource, Action invalidate, decimal? initialAmount = null, bool raiseTo = false)
+    public AddStockWindow(DiscoveryResult scan, BuildingRow[] buildings, LiveResourceRow resource, Action invalidate, decimal? initialAmount = null, bool raiseTo = false, bool setExact = false)
     {
-        _scan = scan; _buildings = buildings; _resource = resource; _invalidate = invalidate; _raiseTo = raiseTo;
-        Title = raiseTo ? "Raise stock to" : "Add stock once"; Width = 850; Height = 590; MinWidth = 700; MinHeight = 470;
+        _scan = scan; _buildings = buildings; _resource = resource; _invalidate = invalidate; _raiseTo = raiseTo; _setExact = setExact;
+        Title = setExact ? "Set exact stock" : raiseTo ? "Raise stock to" : "Add stock once"; Width = 850; Height = 590; MinWidth = 700; MinHeight = 470;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F2F5F9")); Foreground = new SolidColorBrush(Color.FromRgb(23, 37, 58));
         var root = new DockPanel { Margin = new Thickness(28) };
         var header = new StackPanel(); DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         header.Children.Add(new TextBlock { Text = Title, FontSize = 28, FontWeight = FontWeights.SemiBold });
-        header.Children.Add(new TextBlock { Text = raiseTo ? $"Raise {resource.Name} to this amount in each selected building. Buildings already at or above it stay unchanged. This does not create a saved rule." : $"Add the same amount of {resource.Name} to each selected building. This does not create a saved rule.",
+        header.Children.Add(new TextBlock { Text = setExact ? $"Set {resource.Name} to this exact amount in each selected building. This can lower stock and does not create a saved rule." : raiseTo ? $"Raise {resource.Name} to this amount in each selected building. Buildings already at or above it stay unchanged. This does not create a saved rule." : $"Add the same amount of {resource.Name} to each selected building. This does not create a saved rule.",
             TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(86, 102, 125)), Margin = new Thickness(0, 8, 0, 18) });
         var controls = new StackPanel { Orientation = Orientation.Horizontal };
         controls.Children.Add(_amount);
-        var preview = new Button { Content = raiseTo ? "Preview target" : "Preview addition", Padding = new Thickness(16, 9, 16, 9) };
+        var preview = new Button { Content = raiseTo || setExact ? "Preview target" : "Preview addition", Padding = new Thickness(16, 9, 16, 9) };
         preview.Click += (_, _) => Preview(); controls.Children.Add(preview); header.Children.Add(controls); header.Children.Add(_status);
         _grid.Columns.Add(Column("Selected building", nameof(Row.Building), 2));
         _grid.Columns.Add(Column("Stored now", nameof(Row.Current), 1));
-        _grid.Columns.Add(Column("Increase", nameof(Row.Added), 1));
+        _grid.Columns.Add(Column(setExact ? "Change" : "Increase", nameof(Row.Added), 1));
         _grid.Columns.Add(Column("After", nameof(Row.Result), 1));
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         var close = new Button { Content = "Cancel", IsCancel = true }; footer.Children.Add(close);
-        if (raiseTo) _apply.Content = "Raise selected buildings…";
+        if (setExact) _apply.Content = "Set selected buildings…";
+        else if (raiseTo) _apply.Content = "Raise selected buildings…";
         _apply.Click += Apply_Click; footer.Children.Add(_apply); DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer); root.Children.Add(_grid); Content = root;
         _amount.TextChanged += (_, _) => { _reviewedAmount = null; _apply.IsEnabled = false; _grid.ItemsSource = null; _status.Text = "Quantity changed. Preview it before applying."; };
         Closing += (_, e) => { if (_busy) e.Cancel = true; };
-        _status.Text = $"{buildings.Length} building(s) selected. Enter a positive whole-unit {(raiseTo ? "target" : "amount to add")}.";
+        _status.Text = $"{buildings.Length} building(s) selected. Enter a positive whole-unit {(raiseTo || setExact ? "target" : "amount to add")}.";
         if (initialAmount.HasValue) _amount.Text = initialAmount.Value.ToString(CultureInfo.CurrentCulture);
         Loaded += (_, _) => { if (initialAmount.HasValue) Preview(); else _amount.Focus(); };
     }
@@ -61,7 +63,7 @@ public sealed class AddStockWindow : Window
         try
         {
             var candidates = _buildings.Select(b => b.Candidate).ToArray();
-            var plan = _raiseTo ? ManualStockEditor.PrepareRaiseTo(_scan, candidates, _resource.Id, value) : ManualStockEditor.Prepare(_scan, candidates, _resource.Id, value);
+            var plan = _setExact ? ManualStockEditor.PrepareSetTo(_scan, candidates, _resource.Id, value) : _raiseTo ? ManualStockEditor.PrepareRaiseTo(_scan, candidates, _resource.Id, value) : ManualStockEditor.Prepare(_scan, candidates, _resource.Id, value);
             var changes = plan.Entries.ToDictionary(entry => entry.Building.Address);
             _grid.ItemsSource = _buildings.Select(building =>
             {
@@ -70,7 +72,7 @@ public sealed class AddStockWindow : Window
                 return new Row(building.Name, current.ToString("0.##", CultureInfo.CurrentCulture), increase.ToString("0.##", CultureInfo.CurrentCulture), (current + increase).ToString("0.##", CultureInfo.CurrentCulture));
             }).ToArray();
             _reviewedAmount = value; _apply.IsEnabled = plan.Entries.Count > 0;
-            _status.Text = plan.Entries.Count == 0 ? "All selected buildings are already at or above this target. No changes needed." :
+            _status.Text = plan.Entries.Count == 0 ? (_setExact ? "All selected buildings already have this amount. No changes needed." : "All selected buildings are already at or above this target. No changes needed.") :
                 "Review the selected buildings and quantities. Existing stored records only; the game will pause briefly for the edit.";
         }
         catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or OverflowException)
@@ -84,12 +86,7 @@ public sealed class AddStockWindow : Window
         SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
-            backup = await BackupRetry.RunAsync(
-                () => Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups"))),
-                _ => Dispatcher.Invoke(() => _status.Text = "A save changed during backup. Retrying automatically…"),
-                Task.Delay, CancellationToken.None);
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _status.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         {
@@ -97,10 +94,10 @@ public sealed class AddStockWindow : Window
             _status.Text = "Backup failed; no stock was changed. " + ex.Message;
             return;
         }
-        _status.Text = _raiseTo ? "Raising stock…" : "Adding stock…";
+        _status.Text = _setExact ? "Setting stock…" : _raiseTo ? "Raising stock…" : "Adding stock…";
         try
         {
-            int count = await Task.Run(() => GameWriteCoordinator.Run(() => _raiseTo ? ManualStockEditor.ApplyRaiseToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : ManualStockEditor.ApplyToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None)));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => _setExact ? ManualStockEditor.ApplySetToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : _raiseTo ? ManualStockEditor.ApplyRaiseToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : ManualStockEditor.ApplyToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None)));
             MessageBox.Show(this, $"Updated stock in {count} building(s); memory readback passed. Check the result in Ostriv.\n\nBackup: {backup.Directory}", "Stock updated", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

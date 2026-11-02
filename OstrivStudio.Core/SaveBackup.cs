@@ -57,23 +57,27 @@ public static class SaveBackup
     // A loaded save cannot be inferred reliably from game memory. Capture all
     // top-level saves instead; the manifest retains the exact original names.
     // This cannot capture unsaved state in the running game's memory.
-    public static SaveDirectoryBackup CopyAllSavesVerified(string saveDirectory, string directory)
+    public static SaveDirectoryBackup CopyAllSavesVerified(string saveDirectory, string directory, bool allowNoSaves = false)
     {
         string sourceDir = Path.GetFullPath(saveDirectory);
         string backupRoot = Path.GetFullPath(directory);
-        if (!Directory.Exists(sourceDir)) throw new DirectoryNotFoundException("The Ostriv save folder was not found.");
         string sourcePrefix = Path.TrimEndingDirectorySeparator(sourceDir) + Path.DirectorySeparatorChar;
         string backupPrefix = Path.TrimEndingDirectorySeparator(backupRoot) + Path.DirectorySeparatorChar;
         if (string.Equals(sourcePrefix, backupPrefix, StringComparison.OrdinalIgnoreCase) ||
             backupPrefix.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("The backup folder must be outside the Ostriv save folder.");
 
-        static string[] SaveFiles(string folder)
+        string[] SaveFiles(string folder)
         {
-            var files = Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
-                .Where(path => string.Equals(Path.GetExtension(path), ".save", StringComparison.OrdinalIgnoreCase))
-                .Select(Path.GetFullPath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).Take(1001).ToArray();
-            if (files.Length == 0) throw new InvalidDataException("No Ostriv save files were found. Save the game first to create a recovery point.");
+            string[] files;
+            try
+            {
+                files = Directory.EnumerateFiles(folder, "*", SearchOption.TopDirectoryOnly)
+                    .Where(path => string.Equals(Path.GetExtension(path), ".save", StringComparison.OrdinalIgnoreCase))
+                    .Select(Path.GetFullPath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).Take(1001).ToArray();
+            }
+            catch (DirectoryNotFoundException) when (allowNoSaves) { return []; }
+            if (files.Length == 0 && !allowNoSaves) throw new InvalidDataException("No Ostriv save files were found. Save the game first to create a recovery point.");
             if (files.Length > 1000) throw new InvalidDataException("There are too many save files to back up safely.");
             return files;
         }
@@ -89,6 +93,7 @@ public static class SaveBackup
         }
 
         string session = Path.Combine(backupRoot, $"session-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(session);
         var copies = new List<BackupFile>(originals.Length);
         foreach (string original in originals) copies.Add(new(original, CopyVerified(original, session)));
 

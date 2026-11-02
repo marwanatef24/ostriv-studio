@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -43,27 +42,23 @@ public sealed class FarmPloughWindow : Window
         if (_busy || sender is not Button { Tag: bool enabled }) return;
         var selected = _grid.SelectedItems.OfType<Row>().Select(r => r.Number).ToArray();
         if (selected.Length == 0) { _status.Text = "Select one or more fields first."; return; }
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        _busy = true; IsEnabled = false; _status.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _status.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no field was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save, and do fields {string.Join(", ", selected.Order())} match your intended fields? Turn ploughing {(enabled ? "on" : "off")}? The game pauses briefly; avoid changing its speed during the edit.\n\nIf the action fails, do not save; reload the backup and recover autosaves using its manifest.";
-        if (MessageBox.Show(this, question, "Change ploughing?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        _busy = true; _status.Text = "Updating fields…";
+        { _busy = false; IsEnabled = true; _status.Text = "Backup failed; no field was changed. " + ex.Message; return; }
+        _status.Text = "Updating fields…";
         try
         {
             int count = await Task.Run(() => GameWriteCoordinator.Run(() => FarmPloughEditor.ApplyToGame(_snapshot, selected, enabled, CancellationToken.None)));
+            IsEnabled = true;
             MessageBox.Show(this, $"{count} field setting(s) passed memory readback. Check them in Ostriv.\n\nBackup: {backup.Directory}", "Fields updated", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
-        { MessageBox.Show(this, "The action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Field update stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _busy = false; _invalidate(); Close(); }
+        { IsEnabled = true; MessageBox.Show(this, "The action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Field update stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { _busy = false; IsEnabled = true; _invalidate(); Close(); }
     }
 }

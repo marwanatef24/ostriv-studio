@@ -117,6 +117,7 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                   <Button Content="Add" Tag="add" Click="ResourceRowAction_Click" IsEnabled="{Binding CanEdit}" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,4,0" ToolTip="Add this amount once to each selected building" ToolTipService.ShowOnDisabled="True"/>
                   <Button Content="Raise" Tag="raise" Click="ResourceRowAction_Click" IsEnabled="{Binding CanEdit}" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,4,0" ToolTip="Increase each selected building to at least this amount once; higher quantities stay unchanged" ToolTipService.ShowOnDisabled="True"/>
+                  <Button Content="Set" Tag="set" Click="ResourceRowAction_Click" IsEnabled="{Binding CanSet}" Style="{StaticResource WorkButton}" Padding="7,5" Margin="0,0,4,0" ToolTip="Set an exact amount once; requires one stored record with no reservations or incoming stock" ToolTipService.ShowOnDisabled="True"/>
                   <Button Content="Keep" Tag="keep" Click="ResourceRowAction_Click" IsEnabled="{Binding CanKeep}" Style="{StaticResource WorkButton}" Padding="7,5" Background="#E5F3EA" ToolTip="Save a minimum rule for every matching building of this type" ToolTipService.ShowOnDisabled="True"/>
                 </StackPanel>
               </DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>

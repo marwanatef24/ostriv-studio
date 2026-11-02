@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
 using OstrivStudio.Core;
-using Microsoft.Win32;
 
 namespace OstrivStudio;
 
@@ -19,6 +18,7 @@ public sealed class BulkPreviewWindow : Window
     private readonly TextBox _amount = new() { MinWidth = 150, Padding = new Thickness(8), Margin = new Thickness(0, 7, 10, 7) };
     private readonly DataGrid _grid = new() { AutoGenerateColumns = false, IsReadOnly = true, CanUserAddRows = false, CanUserDeleteRows = false, MinHeight = 220, Margin = new Thickness(0, 12, 0, 12) };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
+    private bool _busy;
 
     public BulkPreviewWindow(BuildingRow[] buildings, LiveResourceRow resource, DiscoveryResult? snapshot, Action invalidate, decimal? savedTarget = null)
     {
@@ -57,33 +57,31 @@ public sealed class BulkPreviewWindow : Window
             _summary.Text = $"Saved fish rule: target {savedTarget.Value.ToString(CultureInfo.CurrentCulture)} per dock. Review the results, then use the limited fish action.";
         }
         Loaded += (_, _) => _amount.Focus();
+        Closing += (_, e) => { if (_busy) e.Cancel = true; };
     }
 
-    private void EditFish(Button edit)
+    private async void EditFish(Button edit)
     {
-        if (_snapshot is null) return;
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        if (_busy || _snapshot is null) return;
+        var scan = _snapshot;
+        _busy = true; IsEnabled = false; _summary.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _summary.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no edit was made.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string question = $"Verified backups of the selected save and {backup.Autosaves.Count} autosave(s) are in:\n{backup.Directory}\n\nSave in Ostriv, pause the game, then scan before editing. Is the selected file your current save and is the game paused? The editor cannot verify either. This adds one fish to each of {_buildings.Length} selected candidates. Storage limits and candidate identities are not automatically verified. Ostriv can autosave even while paused; after a failure, reload the backed-up selected save without saving and use the manifest to recover autosaves if needed.";
-        if (MessageBox.Show(this, question, "Confirm limited fish edit", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        { _busy = false; IsEnabled = true; _summary.Text = "Backup failed; no edit was made. " + ex.Message; return; }
         edit.IsEnabled = false;
         try
         {
-            GameWriteCoordinator.Run(() => { FishBulkEditor.ApplyToGame(_snapshot, _buildings.Select(b => b.Candidate).ToArray()); return true; });
+            await Task.Run(() => GameWriteCoordinator.Run(() => ManualStockEditor.ApplyToGame(scan, _buildings.Select(b => b.Candidate).ToArray(), 27, 1, CancellationToken.None)));
+            IsEnabled = true;
             MessageBox.Show(this, "The memory readback succeeded. Check the docks in Ostriv, then save in the game to keep the changes.\n\nBackups: " + backup.Directory, "Fish edit applied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or OverflowException)
-        { MessageBox.Show(this, "Edit stopped. If any write was attempted, do not save; reload the selected save backup. The game can autosave partial changes even while paused.\n\n" + ex.Message + "\n\nBackups: " + backup.Directory, "Fish edit stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _invalidate(); Close(); }
+        { IsEnabled = true; MessageBox.Show(this, "Edit stopped. If any write was attempted, do not save; reload the backup. The game can autosave partial changes even while paused.\n\n" + ex.Message + "\n\nBackups: " + backup.Directory, "Fish edit stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { _busy = false; IsEnabled = true; _invalidate(); Close(); }
     }
 
     private void Calculate()

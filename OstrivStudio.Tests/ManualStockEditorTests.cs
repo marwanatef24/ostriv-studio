@@ -34,6 +34,47 @@ internal static class ManualStockEditorTests
             BitConverter.ToSingle(memory.Read(0x30004, 4)) != 55 || BitConverter.ToSingle(memory.Read(0x40004, 4)) != 85)
             throw new Exception("One-time addition did not apply to each selected building");
         Console.WriteLine("PASS one-time addition increases existing stock in both selected buildings by the requested amount");
+        (scan, buildings, memory) = Fixture();
+        var ashery = buildings[0] with { ClassName = "building_ashery", Resources = [new(0, 111, 50, 0, 0, 0)] };
+        var asheryScan = scan with { Buildings = [ashery] };
+        memory.Put(ashery.ResourcePointer, BitConverter.GetBytes(111));
+        if (ManualStockEditor.ApplyChecked(asheryScan, [ashery], 111, 1, memory) != 1 || BitConverter.ToSingle(memory.Read(ashery.ResourcePointer + 4, 4)) != 51)
+            throw new Exception("Existing ash stock was not increased");
+        Console.WriteLine("PASS an existing ashery ash record can be increased with the guarded editor");
+        if (new[] {39, 57, 58, 109, 111, 112}.Any(id => !ExistingRuleExecutor.SupportsExisting("building_ashery", id)) ||
+            new[] {25, 32, 40, 58, 64}.Any(id => !ExistingRuleExecutor.SupportsExisting("building_brickworks", id)) ||
+            !ExistingRuleExecutor.SupportsExisting("building_boatyard", 16) ||
+            ExistingRuleExecutor.SupportsExisting("building_boatyard", 99))
+            throw new Exception("Observed resource support did not match the tested classes");
+        foreach (var (type, ids) in new (string, int[])[] {
+            ("building_cartwright", [16, 36]), ("building_forestry", [16, 17, 39, 57]),
+            ("building_glassworks", [39, 64, 109, 114, 115]), ("building_limeworks", [42, 58, 63]),
+            ("building_oil_workshop", [10, 12, 85, 133, 134, 135]), ("building_shoemaker", [47, 48, 123]),
+            ("building_smithy", [33, 36, 38, 40]), ("building_thatchery", [18, 51]) })
+            if (ids.Any(id => !ExistingRuleExecutor.SupportsExisting(type, id)) || ExistingRuleExecutor.SupportsExisting(type, 65535))
+                throw new Exception("Production building support is broader or narrower than the reviewed combinations: " + type);
+        Console.WriteLine("PASS newly observed resources are limited to their tested building classes");
+        (scan, buildings, memory) = Fixture();
+        var shop = buildings[0] with { ClassName = "building_shop", Resources = [new(0, 11, 50, 0, 0, 0)] };
+        var shopScan = scan with { Buildings = [shop] };
+        memory.Put(shop.ResourcePointer, BitConverter.GetBytes(11));
+        if (ManualStockEditor.ApplyChecked(shopScan, [shop], 11, 1, memory) != 1 || BitConverter.ToSingle(memory.Read(shop.ResourcePointer + 4, 4)) != 51)
+            throw new Exception("Existing shop stock was not increased");
+        try { ManualStockEditor.Prepare(shopScan, [shop], 11, 51); throw new Exception("Retail stock above the shelf limit accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS ordinary shop stock remains within the 100-unit retail limit"); }
+        if (!ExistingRuleExecutor.SupportsExisting("building_rowhouse_shop", 114)) throw new Exception("Glassware missing from rowhouse-shop support");
+        (scan, buildings, memory) = Fixture();
+        if (ManualStockEditor.ApplySetToChecked(scan, buildings, 33, 40, memory) != 2 ||
+            BitConverter.ToSingle(memory.Read(0x30004, 4)) != 40 || BitConverter.ToSingle(memory.Read(0x40004, 4)) != 40)
+            throw new Exception("Exact replacement did not reduce both independent stored records");
+        Console.WriteLine("PASS exact amounts can reduce existing stock across selected buildings");
+        (scan, buildings, memory) = Fixture();
+        var reserved = buildings[0] with { ResourceCount = 2, Resources = [new(0, 33, 50, 0, 0, 0), new(1, 33, 5, 1, 0, 0)] };
+        var reservedScan = scan with { Buildings = [reserved, buildings[1]] };
+        try { ManualStockEditor.PrepareSetTo(reservedScan, [reserved], 33, 40); throw new Exception("Reserved stock accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS exact replacement rejects reserved or split stock"); }
+        try { ManualStockEditor.PrepareSetTo(scan, buildings, 33, 0); throw new Exception("Zero target accepted"); }
+        catch (InvalidOperationException) { Console.WriteLine("PASS exact replacement does not remove resource records"); }
         (scan, buildings, memory) = Fixture(); memory.Put(0x40004, BitConverter.GetBytes(81f));
         try { ManualStockEditor.ApplyChecked(scan, buildings, 33, 5, memory); throw new Exception("Stale quantity accepted"); }
         catch (InvalidOperationException) when (memory.Writes == 0) { Console.WriteLine("PASS stale stock blocks the one-time batch before any write"); }

@@ -133,12 +133,7 @@ public sealed class RuleMonitorWindow : Window
         SaveBackup.SaveDirectoryBackup? backup = null;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
-            backup = await BackupRetry.RunAsync(
-                () => Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups"))),
-                _ => Dispatcher.Invoke(() => SetStatus("A save changed during backup. Retrying automatically…")),
-                Task.Delay, _shutdown.Token);
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => { if (!_closed && !_stopRequested) SetStatus("A save changed during backup. Retrying automatically…"); }), _shutdown.Token);
         }
         catch (OperationCanceledException) { return; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
@@ -203,6 +198,11 @@ public sealed class RuleMonitorWindow : Window
         {
             if (_closed || !ReferenceEquals(_cancellation, cts)) return;
             ShowRows(tick.BeforeEdit, tick);
+            if (tick.WaitingForStableCandidates)
+            {
+                SetStatus("Buildings changed. Checking again before applying saved rules…");
+                return;
+            }
             string skipped = tick.Skipped.Count == 0 ? "None skipped." : $"Skipped: {string.Join("; ", tick.Skipped.Take(3))}" + (tick.Skipped.Count > 3 ? $"; +{tick.Skipped.Count - 3} more" : "");
             SetStatus($"Checked {tick.BeforeEdit.Rows.Count} resource and {tick.BeforeEdit.CapacityRows.Count} capacity rules at {tick.BeforeEdit.ObservedUtc.ToLocalTime():T}; applied {tick.Applied} resource and {tick.CapacityApplied} capacity change(s). {skipped} Values are from before edits. Backup: {backupDirectory}");
         });
@@ -248,7 +248,9 @@ public sealed class RuleMonitorWindow : Window
                 {
                     if (_reviewedReport is null || _reviewedSettingsHash is null || !_reviewedSettingsHash.AsSpan().SequenceEqual(before))
                         throw new InvalidOperationException("The profile changed since the reviewed scan; monitor again.");
-                    RuleMonitor.RequireReviewedSnapshot(_reviewedReport, scan, document.AutomationProfiles[_profile], false);
+                    if (_reviewedReport.ProcessId != scan.ProcessId || _reviewedReport.ProcessStartedUtc != scan.ProcessStartedUtc ||
+                        !string.Equals(_reviewedReport.GameSha256, scan.GameSha256, StringComparison.Ordinal))
+                        throw new InvalidOperationException("The game session changed; automation stopped.");
                 }
                 profileHashAtScan = before;
                 return (scan, document);
@@ -279,7 +281,7 @@ public sealed class RuleMonitorWindow : Window
                         }
                         Dispatcher.Invoke(() => { SetStatus("Applying capacity rules · do not change the game speed or pause control…"); WriteStarting?.Invoke(); });
                         return GameWriteCoordinator.Run(() => { CheckSettings(); return CapacityRulePlanner.ApplyToGame(capacityPlan, scan, token, CheckSettings); }, token);
-                    }, token));
+                    }, token), _reviewedReport?.CandidateIdentities);
             else
                 await RuleMonitor.RunAsync(async token => { var (scan, document) = await Read(token); return (scan, document.AutomationProfiles[_profile]); },
                     report => ((IProgress<RuleMonitorReport>)progress).Report(report), Task.Delay, cts.Token);

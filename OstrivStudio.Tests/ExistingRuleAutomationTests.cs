@@ -26,15 +26,46 @@ internal static class ExistingRuleAutomationTests
             catch (OperationCanceledException) { }
         }
         Check(scans==2 && writes==1 && ticks.Select(t=>t.Applied).SequenceEqual([1,0]), "existing-rule runner applies once and skips the satisfied target next cycle");
-        int calls=0; writes=0;
+        int calls=0; writes=0; amount=4999;
+        var candidateTicks = new List<ExistingRuleTick>();
+        using (var changed = new CancellationTokenSource())
+        {
+            try
+            {
+                await ExistingRuleAutomation.RunAsync(_ => { calls++; return Task.FromResult((Snapshot(0x4000), profile)); },
+                    (_, scan, _) => { writes++; amount=5000; return Task.FromResult(new LiveRuleResult(scan, 1)); },
+                    tick => { candidateTicks.Add(tick); if (candidateTicks.Count == 2) changed.Cancel(); },
+                    (_,_)=>Task.CompletedTask, changed.Token,
+                    initialCandidates: RuleMonitor.CandidateIdentities(Snapshot(0x3000), settings));
+                throw new Exception("Cancellation ignored");
+            }
+            catch (OperationCanceledException) { }
+        }
+        Check(calls==2 && writes==1 && candidateTicks[0].WaitingForStableCandidates && !candidateTicks[1].WaitingForStableCandidates,
+            "changed candidates are checked twice before automation writes again");
+        calls=0; writes=0; amount=4999;
+        using (var unstable = new CancellationTokenSource())
+        {
+            try
+            {
+                await ExistingRuleAutomation.RunAsync(_ => { calls++; return Task.FromResult((Snapshot(calls % 2 == 0 ? 0x3000UL : 0x4000UL), profile)); },
+                    (_, _, _) => { writes++; throw new Exception("Unstable candidates were written"); },
+                    _ => { if (calls == 3) unstable.Cancel(); }, (_,_)=>Task.CompletedTask, unstable.Token,
+                    initialCandidates: RuleMonitor.CandidateIdentities(Snapshot(0x3000), settings));
+                throw new Exception("Cancellation ignored");
+            }
+            catch (OperationCanceledException) { }
+        }
+        Check(calls==3 && writes==0, "repeatedly changing candidates never trigger a write");
+        calls=0; writes=0;
         try
         {
-            await ExistingRuleAutomation.RunAsync(_ => Task.FromResult((Snapshot(++calls==1 ? 0x3000UL : 0x4000UL), profile)),
-                (_, scan, _) => { writes++; return Task.FromResult(new LiveRuleResult(scan, 0)); }, _=>{}, (_,_)=>Task.CompletedTask, CancellationToken.None);
-            throw new Exception("Changed pointer accepted");
+            await ExistingRuleAutomation.RunAsync(_ => { calls++; var scan=Snapshot(); return Task.FromResult((calls == 1 ? scan : scan with { ProcessStartedUtc = started.AddSeconds(1) }, profile)); },
+                (_, scan, _) => { writes++; return Task.FromResult(new LiveRuleResult(scan, 1)); }, _ => { }, (_,_) => Task.CompletedTask, CancellationToken.None);
+            throw new Exception("Changed game session accepted");
         }
-        catch (InvalidOperationException) { }
-        Check(calls==2 && writes==0, "existing-rule runner stops on a changed candidate array");
+        catch (InvalidOperationException ex) when (ex.Message.Contains("session changed")) { }
+        Check(calls==2 && writes==1, "a changed game session stops the runner before another write");
         amount=4999; calls=0; writes=0;
         try
         {

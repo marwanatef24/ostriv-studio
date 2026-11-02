@@ -64,7 +64,7 @@ public static class RuleMonitor
             { rows.Add(Row(0, null, "Conflicting rules", "Another enabled rule can target the same resource and building.")); continue; }
             if (!ExistingRuleExecutor.SupportsExisting(type, rule.ResourceId))
             { rows.Add(Row(0, null, "Not supported", "Automatic edits for this building and resource are not supported.")); continue; }
-            if (type.Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase) && rule.Target > 100)
+            if (ExistingRuleExecutor.IsRetail(type) && rule.Target > 100)
             { rows.Add(Row(0, null, "Not supported", "Shop minimums are limited to 100.")); continue; }
 
             var matches = scan.Buildings.Where(b => type.Length == 0 || string.Equals(type, b.ClassName, StringComparison.OrdinalIgnoreCase)).ToArray();
