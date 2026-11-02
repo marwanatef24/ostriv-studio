@@ -32,6 +32,7 @@ public sealed record LiveResourceRow(string Name, int Id, string Stored, string 
     public string Amount { get; set; } = "";
     public bool CanEdit { get; init; }
     public bool CanKeep { get; init; }
+    public bool CanSet { get; init; }
 }
 public sealed record StockMixRow(string Label, double Percent);
 
@@ -218,7 +219,7 @@ public partial class BuildingWindow : Window
         else
         {
             RaiseIntent.IsChecked = action == "raise";
-            AddNow_Click(sender, e);
+            OpenStockAction(action == "set");
         }
     }
     private void ActionIntent_Changed(object sender, RoutedEventArgs e) => UpdateActions();
@@ -317,11 +318,11 @@ public partial class BuildingWindow : Window
     {
         var selected = BuildingGrid.SelectedItem as BuildingRow;
         string type = selected?.Candidate.ClassName ?? "";
-        bool supported = type is "building_camp_storage" or "building_granary" or "building_warehouse" or "building_well" or "building_stone_mining_camp" or "building_fishery" or "building_trading_post" or "building_trading_dock" or "building_ashery" or "building_brickworks" or "building_rowhouse_shop";
+        bool supported = selected?.Candidate.Resources.Any(r => ExistingRuleExecutor.SupportsExisting(type, r.Id)) == true;
         string current = selected is null ? "Select a building to see whether it supports automated edits." :
             supported ? $"{selected.Name}: supported existing-resource automation on the tested game build." :
             $"{selected.Name}: resource inspection is available; automatic edits are not yet verified.";
-        MessageBox.Show(this, current + "\n\nExplore scanned resources in the ledger, see where they appear, monitor recent scans and export the displayed building breakdown.\n\nEach and Across automation supports camp storage, granary, warehouse, well, stone mining camp, trading post and fishing dock, under different record restrictions. Trading-dock broadcloth and clothes, rowhouse-shop buckwheat, clothes, shoes and warm clothes (up to 100), ashery potash and brickworks brick support existing-record rules only. Selected nonperishable resources can be inserted for Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Selected future farm crops can be changed, and grain-field nutrients restored. Supported saved capacity rules run while the monitor is active; capacity may reset on reload.\n\nOther building types, perishable insertion, other farm controls, other market stock, direct deal edits, vehicles, money and date are not yet available. A preview is not an edit.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
+        MessageBox.Show(this, current + "\n\nExisting stock can be added to or raised for supported combinations. Set changes an exact amount when there is one stored record and no reservations. Additional production buildings include asheries, boatyards, brickworks, cartwrights, forestry, glassworks, limeworks, oil workshops, shoemakers, smithies and thatcheries. Shops and trading docks have narrower support. Selected missing nonperishable resources can be inserted by saved Each rules. Granary, warehouse and big hay barrack capacities and existing post and dock export targets can be increased. Farm rotations, ploughing and nutrient restoration are available for supported fields.\n\nOther building types, perishable insertion, split-stock exact changes, other market stock and direct deal edits are not yet available.", "Supported features", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void BuildingSearch_Changed(object sender, TextChangedEventArgs e)
     {
@@ -363,6 +364,8 @@ public partial class BuildingWindow : Window
                 FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other))
             {
                 CanEdit = supported,
+                CanSet = supported && selectedBuildings.All(b => b.Candidate.Resources.Count(r => r.Id == total.Id && r.Status == 0) == 1 &&
+                    !b.Candidate.Resources.Any(r => r.Id == total.Id && r.Status != 0)),
                 CanKeep = supported && _settingsAvailable && selectedBuildings.Select(b => b.Candidate.ClassName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1
             });
         }
@@ -520,7 +523,8 @@ public partial class BuildingWindow : Window
         var window = new BulkPreviewWindow(selected, resource, _snapshot, () => { _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount(); ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "A write was attempted; previous results are invalid."; BottomStatus.Text = "For a successful edit, save in Ostriv. If the edit failed, reload the backup."; }) { Owner = this };
         window.ShowDialog();
     }
-    private void AddNow_Click(object sender, RoutedEventArgs e)
+    private void AddNow_Click(object sender, RoutedEventArgs e) => OpenStockAction(false);
+    private void OpenStockAction(bool setExact)
     {
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         if (_snapshot is null || selected.Length == 0 || LiveResourceGrid.SelectedItem is not LiveResourceRow resource)
@@ -532,7 +536,7 @@ public partial class BuildingWindow : Window
             _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
             ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "The one-time stock action invalidated the previous snapshot.";
             BottomStatus.Text = "Check the game before saving; reload the backup if anything is unexpected.";
-        }, amount, raiseTo: RaiseIntent.IsChecked == true) { Owner = this }.ShowDialog();
+        }, amount, raiseTo: !setExact && RaiseIntent.IsChecked == true, setExact: setExact) { Owner = this }.ShowDialog();
     }
     private void KeepStocked_Click(object sender, RoutedEventArgs e)
     {
@@ -722,7 +726,7 @@ public partial class BuildingWindow : Window
     }
 
     private void MonitorRules_Click(object sender, RoutedEventArgs e) => ShowAutomationMonitor();
-    private void ApplyCampRules_Click(object sender, RoutedEventArgs e)
+    private async void ApplyCampRules_Click(object sender, RoutedEventArgs e)
     {
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().Select(x => x.Candidate).ToArray();
         CampRuleExecutor.BatchPlan plan;
@@ -736,29 +740,27 @@ public partial class BuildingWindow : Window
         string skipped = string.Join("\n", plan.Skipped);
         if (plan.Entries.Count == 0)
         { MessageBox.Show(this, "No supported one-unit changes are ready. No change was made.\n\n" + skipped + "\n\nOther rules are not applied by this action.", "Camp rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        string changes = string.Join("\n", plan.Entries.Select(x => $"{x.ResourceName}: {x.Record.Amount:N0} → {x.Target:N0}"));
+        if (MessageBox.Show(this, $"Pause Ostriv before applying these one-time camp changes:\n\n{changes}\n\nThis older action cannot pause the game itself. Your saves will be backed up automatically.", "Apply camp rules?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        IsEnabled = false; BottomStatus.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => BottomStatus.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no edit was made.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string changes = string.Join("\n", plan.Entries.Select(x => $"{x.ResourceName}: {x.Record.Amount:N0} → {x.Target:N0}"));
-        string question = $"Verified backups of the selected save and {backup.Autosaves.Count} autosave(s) are in:\n{backup.Directory}\n\nIs this the loaded save, is the game paused, and is the selected camp-storage candidate the building you intend to edit? The app cannot verify these conditions or storage capacity. It checks that another stored item remains as an anchor, but cannot guarantee that the camp stays active.\n\nThese saved rules will run once:\n{changes}\n\nOther rules will not run. A failed batch may be partial. Ostriv can autosave even while paused; reload the backed-up selected save without saving and use the manifest to recover autosaves if needed.";
-        if (MessageBox.Show(this, question, "Confirm camp rules", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        { IsEnabled = true; BottomStatus.Text = "Backup failed; no edit was made. " + ex.Message; return; }
         try
         {
-            int applied = GameWriteCoordinator.Run(() => CampRuleExecutor.ApplyBatchToGame(_state, _snapshot!, selected));
+            int applied = await Task.Run(() => GameWriteCoordinator.Run(() => CampRuleExecutor.ApplyBatchToGame(_state, _snapshot!, selected)));
+            IsEnabled = true;
             MessageBox.Show(this, $"{applied} resource change(s) passed memory readback. Check them in Ostriv.\n\nBackups: {backup.Directory}", "Camp rules", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or Win32Exception or OverflowException)
-        { MessageBox.Show(this, "The action stopped. If a write was attempted, do not save; reload the selected save backup. The game can autosave partial changes even while paused.\n\n" + ex.Message + "\n\nBackups: " + backup.Directory, "Camp rules stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        { IsEnabled = true; MessageBox.Show(this, "The action stopped. If a write was attempted, do not save; reload the backup. The game can autosave partial changes even while paused.\n\n" + ex.Message + "\n\nBackups: " + backup.Directory, "Camp rules stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally
         {
+            IsEnabled = true;
             _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
             ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "The previous scan is no longer valid.";
             BottomStatus.Text = "Check the result in Ostriv; reload the backup without saving if anything is unexpected.";

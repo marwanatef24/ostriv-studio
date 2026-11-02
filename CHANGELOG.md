@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.2 — simpler edits and more stock controls
+
+- Capacity, farm, trade and older resource actions automatically back up available saves instead of asking which save is loaded. New games with no saves can be edited; an empty backup does not preserve unsaved game state.
+- Added **Set** for exact positive quantities, including reductions, across supported buildings with one stored record and no reserved or incoming records for that resource. Split, missing and zero-amount cases are not yet supported.
+- Added existing items in asheries, boatyards, brickworks, cartwrights, forestry, glassworks, limeworks, oil workshops, shoemakers, smithies and thatcheries. Guarded live changes on hotfix 58 passed readback, as did setting ashery bark from 501 to 500 and raising granary capacity from 20,000 to 20,001. The supported item lists are in FEATURE-COVERAGE.md.
+- Added existing flour in shops and glassware in rowhouse shops, with a 100-unit limit. One live addition to each passed memory readback; other market goods remain limited.
+- When matching candidates change, automation waits for another complete scan to confirm a stable set before writing again. This stability check has simulated tests; scans can include stale objects. A changed game session, incomplete scan or uncertain write still stops the runner.
+- Many resources and building features, direct trade-deal edits, other game builds and exact changes to split or reserved stock remain unsupported.
+
 ## 0.3.1 — automatically show buildings
 
 - When enabled saved rules start, their first complete settlement scan also fills the building list and selects a building. This avoids a separate Find scan; the current selection and manual scans are never replaced.

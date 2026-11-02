@@ -4,21 +4,24 @@ public sealed record ExistingRuleTick(RuleMonitorReport BeforeEdit, int Applied,
 {
     public int CapacityApplied { get; init; }
     public IReadOnlyList<int> AppliedCapacityRuleNumbers { get; init; } = [];
+    public bool WaitingForStableCandidates { get; init; }
 }
 
 // A fresh scan is required for every cycle. Candidate addresses are only used
-// during this session and a changed candidate set stops the runner.
+// during this session. Changed candidates must be rediscovered twice before
+// another write; a changed game session or uncertain write still stops it.
 public static class ExistingRuleAutomation
 {
     public static async Task RunAsync(Func<CancellationToken, Task<(DiscoveryResult Scan, ProfileDocument Profile)>> read,
         Func<ProfileDocument, DiscoveryResult, CancellationToken, Task<LiveRuleResult>> write, Action<ExistingRuleTick> publish,
         Func<TimeSpan, CancellationToken, Task> delay, CancellationToken cancellation,
-        Func<CapacityRulePlan, DiscoveryResult, CancellationToken, Task<int>>? writeCapacities = null)
+        Func<CapacityRulePlan, DiscoveryResult, CancellationToken, Task<int>>? writeCapacities = null,
+        IReadOnlyList<CandidateIdentity>? initialCandidates = null)
     {
         ArgumentNullException.ThrowIfNull(read); ArgumentNullException.ThrowIfNull(write);
         ArgumentNullException.ThrowIfNull(publish); ArgumentNullException.ThrowIfNull(delay);
         (int Id, DateTime Started, string Hash)? session = null;
-        CandidateIdentity[]? identities = null;
+        CandidateIdentity[]? identities = initialCandidates?.ToArray();
         while (true)
         {
             cancellation.ThrowIfCancellationRequested();
@@ -31,7 +34,12 @@ public static class ExistingRuleAutomation
             var report = RuleMonitor.Assess(scan, settings);
             var found = report.CandidateIdentities.ToArray();
             if (identities is not null && !identities.SequenceEqual(found))
-                throw new InvalidOperationException("The matching building candidates or resource arrays changed; automation stopped.");
+            {
+                identities = found;
+                publish(new(report, 0, [], []) { WaitingForStableCandidates = true });
+                await delay(TimeSpan.FromSeconds(5), cancellation).ConfigureAwait(false);
+                continue;
+            }
             identities = found;
             var plan = ExistingRuleExecutor.Prepare(profile, scan);
             var capacityPlan = CapacityRulePlanner.Create(scan, settings, validateWrites: writeCapacities is not null);

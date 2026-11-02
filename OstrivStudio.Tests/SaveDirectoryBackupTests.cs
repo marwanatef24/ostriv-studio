@@ -49,6 +49,13 @@ internal static class SaveDirectoryBackupTests
             "automatic backup requires a saved recovery point");
         Throws<DirectoryNotFoundException>(() => SaveBackup.CopyAllSavesVerified(Path.Combine(directory, "missing-saves"), destination),
             "automatic backup reports a missing save directory");
+        var noSaves = SaveBackup.CopyAllSavesVerified(empty, destination, allowNoSaves: true);
+        Check(noSaves.Files.Count == 0 && JsonSerializer.Deserialize<SaveBackup.SaveDirectoryBackup>(
+            File.ReadAllBytes(Path.Combine(noSaves.Directory, "backup-manifest.json")))?.Files.Count == 0,
+            "a new game can proceed without existing saves and records an empty recovery manifest");
+        var missing = SaveBackup.CopyAllSavesVerified(Path.Combine(directory, "missing-saves"), destination, allowNoSaves: true);
+        Check(missing.Files.Count == 0 && File.Exists(Path.Combine(missing.Directory, "backup-manifest.json")),
+            "a new game can proceed before its save folder exists");
         using (var locked = new FileStream(manual, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             Throws<IOException>(() => SaveBackup.CopyAllSavesVerified(source, destination),
                 "automatic backup fails without touching locked source saves");

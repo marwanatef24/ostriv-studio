@@ -52,6 +52,11 @@ internal static class RuleMonitorTests
             new() { ResourceId = 7, BuildingType = "building_rowhouse_shop", Enabled = true, Target = 101 } ] };
         var unsupportedReport = RuleMonitor.Assess(scan, unsupported);
         Check(unsupportedReport.Rows.All(r => r.State == "Not supported"), "read-only rule checks explain unsupported shop goods and excessive targets before automation starts");
+        var retailSettings = new AutomationProfileSettings { MaintenanceRules = [
+            new() { ResourceId = 11, BuildingType = "building_shop", Enabled = true, Target = 101 },
+            new() { ResourceId = 114, BuildingType = "building_rowhouse_shop", Enabled = true, Target = 101 } ] };
+        Check(RuleMonitor.Assess(scan, retailSettings).Rows.All(r => r.State == "Not supported"),
+            "ordinary and rowhouse shops both reject retail rules above 100");
         var acrossSettings = new AutomationProfileSettings { MaintenanceRules = [
             new() { ResourceId = 14, BuildingType = "building_well", Enabled = true, Target = 5000, Mode = MaintenanceMode.Across } ] };
         var fractional = scan with { Buildings = scan.Buildings.Select(b => b == alteredWell

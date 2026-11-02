@@ -43,14 +43,18 @@ internal static class CapacityRulePlannerTests
         Check(scans == 3 && writes == 2 && ticks.Select(t => t.CapacityApplied).SequenceEqual([1, 0, 1]),
             "capacity automation reapplies the saved minimum after a reset and does not repeat a satisfied write");
         capacity = 7000; scans = 0; writes = 0;
+        var changedTicks = new List<ExistingRuleTick>();
+        using var changed = new CancellationTokenSource();
         try
         {
-            await ExistingRuleAutomation.RunAsync(_ => Task.FromResult((Snapshot(++scans == 1 ? 0x10000UL : 0x20000UL), profile)),
-                (_, _, _) => throw new Exception("No resource writes expected"), _ => { }, (_, _) => Task.CompletedTask,
-                CancellationToken.None, (_, _, _) => { writes++; capacity = 7001; return Task.FromResult(1); });
-            throw new Exception("Changed candidate accepted");
+            await ExistingRuleAutomation.RunAsync(_ => { scans++; if (scans == 2) capacity = 7000; return Task.FromResult((Snapshot(scans == 1 ? 0x10000UL : 0x20000UL), profile)); },
+                (_, _, _) => throw new Exception("No resource writes expected"),
+                tick => { changedTicks.Add(tick); if (changedTicks.Count == 3) changed.Cancel(); }, (_, _) => Task.CompletedTask,
+                changed.Token, (_, _, _) => { writes++; capacity = 7001; return Task.FromResult(1); });
+            throw new Exception("Cancellation ignored");
         }
-        catch (InvalidOperationException) { }
-        Check(scans == 2 && writes == 1, "capacity automation stops when the reviewed candidate changes");
+        catch (OperationCanceledException) { }
+        Check(scans == 3 && writes == 2 && changedTicks[1].WaitingForStableCandidates && changedTicks[1].CapacityApplied == 0,
+            "capacity automation waits for stable changed candidates before writing");
     }
 }

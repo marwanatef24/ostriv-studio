@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -72,27 +71,23 @@ public sealed class CapacityEditWindow : Window
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || _reviewedAmount is not decimal target) return;
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        _busy = true; IsEnabled = false; _status.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _status.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no capacity was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the save loaded in Ostriv, and do these candidates match your selected buildings? The game will briefly pause while increasing their capacity to {target:N0}; avoid changing game speed during the edit. Capacity may reset when the game is reloaded. Saved minimums reapply while the rule monitor runs.\n\nIf an edit fails, it may be partial. Do not save; reload the backup and recover autosaves from its manifest if needed.";
-        if (MessageBox.Show(this, question, "Apply capacity increase?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        _busy = true; _apply.IsEnabled = false; _amount.IsEnabled = false; _status.Text = "Applying capacity changes…";
+        { _busy = false; IsEnabled = true; _status.Text = "Backup failed; no capacity was changed. " + ex.Message; return; }
+        _apply.IsEnabled = false; _amount.IsEnabled = false; _status.Text = "Applying capacity changes…";
         try
         {
             int count = await Task.Run(() => GameWriteCoordinator.Run(() => CapacityEditor.ApplyToGame(_scan, _selected.Select(b => b.Candidate).ToArray(), target, CancellationToken.None)));
+            IsEnabled = true;
             MessageBox.Show(this, $"{count} capacity increase(s) passed memory readback. Check them in Ostriv. Capacity may reset when the game is reloaded; the tested hay barrack did, so restart the rule monitor to reapply saved capacity minimums.\n\nBackup: {backup.Directory}", "Capacity increased", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
-        { MessageBox.Show(this, "The capacity action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Capacity action stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _busy = false; _invalidate(); Close(); }
+        { IsEnabled = true; MessageBox.Show(this, "The capacity action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Capacity action stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { _busy = false; IsEnabled = true; _invalidate(); Close(); }
     }
 }

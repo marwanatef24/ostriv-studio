@@ -18,14 +18,26 @@ public static class ExistingRuleExecutor
     { "building_camp_storage", "building_granary", "building_well", "building_stone_mining_camp", "building_warehouse", "building_fishery", "building_trading_post", "building_ashery", "building_brickworks" };
     public static bool SupportsExisting(string type, int id) => type.Trim().ToLowerInvariant() switch
     {
-        "building_ashery" => id == 109,
-        "building_brickworks" => id == 32,
+        // Existing ordinary stored inputs and output observed in the tested
+        // ashery. Missing records still cannot be inserted here.
+        "building_ashery" => id is 39 or 57 or 58 or 109 or 111 or 112,
+        "building_brickworks" => id is 25 or 32 or 40 or 58 or 64,
+        "building_boatyard" => id == 16,
+        "building_cartwright" => id is 16 or 36,
+        "building_forestry" => id is 16 or 17 or 39 or 57,
+        "building_glassworks" => id is 39 or 64 or 109 or 114 or 115,
+        "building_limeworks" => id is 42 or 58 or 63,
+        "building_oil_workshop" => id is 10 or 12 or 85 or 133 or 134 or 135,
+        "building_shoemaker" => id is 47 or 48 or 123,
+        "building_smithy" => id is 33 or 36 or 38 or 40,
+        "building_thatchery" => id is 18 or 51,
         // Only existing broadcloth and clothes records were corroborated in
         // a live trading dock on the supported executable.
         "building_trading_dock" => id is 92 or 46,
         // Standard existing records corroborated in retail shops. No retail
         // insertion and no edits to their separate incoming-demand list.
-        "building_rowhouse_shop" => id is 7 or 46 or 47 or 93,
+        "building_rowhouse_shop" => id is 7 or 46 or 47 or 93 or 114,
+        "building_shop" => id == 11,
         var name => Classes.Contains(name)
     };
     private static readonly HashSet<int> CampInsertions = [6, 9, 10, 18, 33, 36, 69, 80, 85, 92, 109, 123, 133];
@@ -57,7 +69,7 @@ public static class ExistingRuleExecutor
             if (assessment.Rows[i].State == "Conflicting rules") { skipped.Add(prefix + "conflicting rule"); continue; }
             if (rule.Target is null || rule.BuildingLimit == 0 || !SupportsExisting(rule.BuildingType, rule.ResourceId))
             { skipped.Add(prefix + "unsupported target, building, mode or limit"); continue; }
-            if (rule.BuildingType.Trim().Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase) && rule.Target > 100)
+            if (IsRetail(rule.BuildingType) && rule.Target > 100)
             { skipped.Add(prefix + "retail minimums are limited to the observed 100-unit shelf target"); continue; }
             var matches = scan.Buildings.Where(b => string.Equals(b.ClassName, rule.BuildingType.Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
             if (matches.Length == 0) { skipped.Add(prefix + "no matching building candidates"); continue; }
@@ -127,6 +139,8 @@ public static class ExistingRuleExecutor
         }
         return new(entries.AsReadOnly(), skipped.AsReadOnly());
     }
+    public static bool IsRetail(string type) => type.Trim().Equals("building_rowhouse_shop", StringComparison.OrdinalIgnoreCase) ||
+        type.Trim().Equals("building_shop", StringComparison.OrdinalIgnoreCase);
 
     private static byte[] Encode(ResourceObservation r)
     {

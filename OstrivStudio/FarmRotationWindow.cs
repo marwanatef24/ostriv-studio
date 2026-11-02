@@ -2,7 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -224,29 +223,23 @@ public sealed class FarmRotationWindow : Window
         int[] desired = _drafts[field.Number].ToArray();
         var changes = ReferenceEquals(sender, _applyMatching) ? Matching(desired) : new Dictionary<int, IReadOnlyList<int>> { [field.Number] = desired };
         if (FarmCropEditor.CountChanges(_farm, changes) == 0) return;
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        _busy = true; IsEnabled = false; _status.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
-            string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            backup = await AutomaticSaveBackup.CreateAsync(new Progress<int>(_ => _status.Text = "A save changed during backup. Retrying automatically…"));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no crop rotation was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string order = string.Join(" → ", desired.Skip(1).Select(CropName));
-        string fieldNames = string.Join(", ", changes.Keys.Order().Select(n => $"{n}"));
-        string question = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save and do fields {fieldNames} match the intended fields? The game will briefly pause while applying these future crops:\n\n{order}\n\nEach field keeps its current crop. Other unsaved field drafts are not applied. Avoid changing game speed during the edit. If it fails, do not save; reload the backup and recover autosaves from the manifest if needed.";
-        if (MessageBox.Show(this, question, "Apply crop rotation?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        _busy = true; _apply.IsEnabled = false; _applyMatching.IsEnabled = false; _fields.IsEnabled = false; _status.Text = "Applying the crop rotation…";
+        { _busy = false; IsEnabled = true; _status.Text = "Backup failed; no crop rotation was changed. " + ex.Message; return; }
+        _apply.IsEnabled = false; _applyMatching.IsEnabled = false; _fields.IsEnabled = false; _status.Text = "Applying the crop rotation…";
         try
         {
             int count = await Task.Run(() => GameWriteCoordinator.Run(() => FarmCropEditor.ApplyBatchToGame(_farm, changes, CancellationToken.None)));
+            IsEnabled = true;
             MessageBox.Show(this, $"{count} crop rotation(s) passed memory readback. Check the fields in Ostriv; save there if they are correct.\n\nBackup: " + backup.Directory, "Rotation applied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
-        { MessageBox.Show(this, "The rotation action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Rotation stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
-        finally { _busy = false; _invalidate(); Close(); }
+        { IsEnabled = true; MessageBox.Show(this, "The rotation action stopped. If a write was attempted, do not save; reload the backup.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Rotation stopped", MessageBoxButton.OK, MessageBoxImage.Error); }
+        finally { _busy = false; IsEnabled = true; _invalidate(); Close(); }
     }
 }
