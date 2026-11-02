@@ -78,7 +78,7 @@ public sealed class BulkPreviewWindow : Window
         edit.IsEnabled = false;
         try
         {
-            FishBulkEditor.ApplyToGame(_snapshot, _buildings.Select(b => b.Candidate).ToArray());
+            GameWriteCoordinator.Run(() => { FishBulkEditor.ApplyToGame(_snapshot, _buildings.Select(b => b.Candidate).ToArray()); return true; });
             MessageBox.Show(this, "The memory readback succeeded. Check the docks in Ostriv, then save in the game to keep the changes.\n\nBackups: " + backup.Directory, "Fish edit applied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception or OverflowException)

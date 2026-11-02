@@ -72,7 +72,7 @@ public sealed class TradeAllocationWindow : Window
         catch (Exception ex) { _status.Text = "Backup failed; no target was changed. " + ex.Message; return; }
         if (MessageBox.Show(this, $"The selected save and {backup.Autosaves.Count} autosaves were backed up to:\n{backup.Directory}\n\nIs this the loaded save, and do the reviewed buildings match the settlement? Apply these export-target increases? The game pauses briefly. If an edit fails, reload the backup without saving.", "Apply export allocation?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         _busy = true; _apply.IsEnabled = false; _selection.IsEnabled = false; _mode.IsEnabled = false;
-        try { int count = await Task.Run(() => TradingStockLimits.ApplyAllocationsToGame(snapshot, _deals, _reviewedMode, CancellationToken.None)); MessageBox.Show(this, $"{count} export target(s) passed memory readback. Reopen the trading panels in Ostriv and check the result.\n\nBackup: {backup.Directory}", "Export allocation applied"); }
+        try { int count = await Task.Run(() => GameWriteCoordinator.Run(() => TradingStockLimits.ApplyAllocationsToGame(snapshot, _deals, _reviewedMode, CancellationToken.None))); MessageBox.Show(this, $"{count} export target(s) passed memory readback. Reopen the trading panels in Ostriv and check the result.\n\nBackup: {backup.Directory}", "Export allocation applied"); }
         catch (Exception ex) { MessageBox.Show(this, "The allocation stopped. If any write was attempted, reload the backup without saving.\n\n" + ex.Message + "\n\nBackup: " + backup.Directory, "Export allocation stopped"); }
         finally { _busy = false; _invalidate(); Close(); }
     }

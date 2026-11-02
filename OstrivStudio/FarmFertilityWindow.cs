@@ -56,7 +56,7 @@ public sealed class FarmFertilityWindow : Window
         _busy = true;
         try
         {
-            int count = await Task.Run(() => FarmPloughEditor.RestoreFertilityInGame(_snapshot, selected, CancellationToken.None));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => FarmPloughEditor.RestoreFertilityInGame(_snapshot, selected, CancellationToken.None)));
             MessageBox.Show(this, $"{count} field(s) passed memory readback. Check their nutrients in Ostriv.\n\nBackup: {backup.Directory}", "Fertility restored", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

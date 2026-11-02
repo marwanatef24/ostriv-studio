@@ -16,7 +16,7 @@
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
         <Button Content="Import original rules…" Click="ImportOriginal_Click" />
-        <Button Content="Monitor &amp; run" Click="MonitorRules_Click" Background="#174F47" Foreground="White" />
+        <Button Content="View rule status" Click="MonitorRules_Click" Background="#174F47" Foreground="White" />
         <Button Content="Back to buildings" IsCancel="True" />
       </StackPanel>
     </Grid>
@@ -44,7 +44,7 @@
           <TextBlock Text="Across buildings" Foreground="#176554" FontWeight="SemiBold" />
           <TextBlock Text="Matching buildings share one combined minimum." Foreground="#56667D" TextWrapping="Wrap" Margin="0,7,0,20" />
           <Button Content="Capacity rules…" Click="CapacityRules_Click" />
-          <TextBlock Text="Rules are saved locally. Start the monitor to apply supported rules while you play." Foreground="#56667D" TextWrapping="Wrap" Margin="0,24,0,0" />
+          <TextBlock Text="Rules are saved locally and run when automation is on." Foreground="#56667D" TextWrapping="Wrap" Margin="0,24,0,0" />
         </StackPanel>
         </ScrollViewer>
       </Border>

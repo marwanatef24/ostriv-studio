@@ -43,7 +43,8 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Button x:Name="ProfilesButton" Content="Saved rules" Click="Profiles_Click" Style="{StaticResource WorkButton}" Margin="0,0,8,0"/>
-          <Button Content="Start saved rules" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Background="#A8D8B7" Foreground="#143C2F" BorderThickness="0" Margin="0,0,8,0"/>
+          <Button x:Name="AutomationToggle" Content="Automation on" Click="AutomationToggle_Click" Style="{StaticResource WorkButton}" Background="#A8D8B7" Foreground="#143C2F" BorderThickness="0" Margin="0,0,8,0"/>
+          <Button x:Name="AutomationDetailsButton" Content="Rule status" Click="MonitorRules_Click" Style="{StaticResource WorkButton}" Margin="0,0,8,0"/>
           <Button Content="Resource overview" Click="ResourceLedger_Click" Style="{StaticResource WorkButton}" Margin="0,0,8,0"/>
           <Button x:Name="ChooseButton" Content="Choose game" Click="ChooseGame_Click" Style="{StaticResource WorkButton}"/>
           <Menu Background="Transparent" Foreground="White" Margin="10,0,0,0" VerticalAlignment="Center"><MenuItem Header="More" Foreground="White"><MenuItem Header="Review saved rules" Click="PreviewRules_Click"/><MenuItem Header="Supported features" Click="Capabilities_Click"/><Separator/><MenuItem Header="Check for updates" Click="CheckUpdates_Click"/></MenuItem></Menu>
@@ -54,7 +55,7 @@
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock x:Name="ConnectionTitle" Text="Start your settlement" FontWeight="SemiBold" Foreground="#255440" VerticalAlignment="Center"/>
         <TextBlock Grid.Column="1" x:Name="ConnectionDetail" Text="Open Ostriv and load a save, then find buildings." Foreground="#5C7365" Margin="14,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-        <TextBlock Grid.Column="2" x:Name="ConnectionBadge" Text="Experimental" Foreground="#687C6E" VerticalAlignment="Center"/>
+        <StackPanel Grid.Column="2" Orientation="Horizontal"><TextBlock x:Name="AutomationStatus" Text="Automation starting" Foreground="#255440" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,18,0"/><TextBlock x:Name="ConnectionBadge" Text="Experimental" Foreground="#687C6E" VerticalAlignment="Center"/></StackPanel>
       </Grid>
     </Border>
     <Grid Grid.Row="2" Margin="16,14,16,10">

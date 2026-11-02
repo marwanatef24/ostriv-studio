@@ -88,7 +88,7 @@ public sealed class CapacityEditWindow : Window
         _busy = true; _apply.IsEnabled = false; _amount.IsEnabled = false; _status.Text = "Applying capacity changes…";
         try
         {
-            int count = await Task.Run(() => CapacityEditor.ApplyToGame(_scan, _selected.Select(b => b.Candidate).ToArray(), target, CancellationToken.None));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => CapacityEditor.ApplyToGame(_scan, _selected.Select(b => b.Candidate).ToArray(), target, CancellationToken.None)));
             MessageBox.Show(this, $"{count} capacity increase(s) passed memory readback. Check them in Ostriv. Capacity may reset when the game is reloaded; the tested hay barrack did, so restart the rule monitor to reapply saved capacity minimums.\n\nBackup: {backup.Directory}", "Capacity increased", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

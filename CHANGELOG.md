@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — background automation
+
+- Enabled saved rules start in the background when the configured game is detected. The master on/off setting survives reopening, and the status window can be closed without stopping rules.
+- Profile edits pause the runner and automatically start it again afterward. Manual and automatic writes are serialized across compatible editor instances; older versions and other editors do not share this lock.
+- Complete memory scanning skips non-candidate table addresses earlier, and automatic backups retry transient save-file changes up to three times.
+- Automation still stops when the matching candidate set changes, and unsupported buildings and resources remain unavailable.
+
 ## 0.2.9 — simpler resource actions and automation startup
 
 - Enter amounts and choose Add, Raise, or Keep directly beside each resource in the building table.

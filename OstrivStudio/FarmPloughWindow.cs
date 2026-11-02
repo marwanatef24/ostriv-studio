@@ -59,7 +59,7 @@ public sealed class FarmPloughWindow : Window
         _busy = true; _status.Text = "Updating fields…";
         try
         {
-            int count = await Task.Run(() => FarmPloughEditor.ApplyToGame(_snapshot, selected, enabled, CancellationToken.None));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => FarmPloughEditor.ApplyToGame(_snapshot, selected, enabled, CancellationToken.None)));
             MessageBox.Show(this, $"{count} field setting(s) passed memory readback. Check them in Ostriv.\n\nBackup: {backup.Directory}", "Fields updated", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

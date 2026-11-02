@@ -86,7 +86,10 @@ public sealed class AddStockWindow : Window
         {
             string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
             string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
-            backup = await Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups")));
+            backup = await BackupRetry.RunAsync(
+                () => Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups"))),
+                _ => Dispatcher.Invoke(() => _status.Text = "A save changed during backup. Retrying automatically…"),
+                Task.Delay, CancellationToken.None);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
         {
@@ -97,7 +100,7 @@ public sealed class AddStockWindow : Window
         _status.Text = _raiseTo ? "Raising stock…" : "Adding stock…";
         try
         {
-            int count = await Task.Run(() => _raiseTo ? ManualStockEditor.ApplyRaiseToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : ManualStockEditor.ApplyToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None));
+            int count = await Task.Run(() => GameWriteCoordinator.Run(() => _raiseTo ? ManualStockEditor.ApplyRaiseToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : ManualStockEditor.ApplyToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None)));
             MessageBox.Show(this, $"Updated stock in {count} building(s); memory readback passed. Check the result in Ostriv.\n\nBackup: {backup.Directory}", "Stock updated", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)

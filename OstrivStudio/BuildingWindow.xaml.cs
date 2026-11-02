@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
@@ -7,6 +8,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using OstrivStudio.Core;
 
@@ -48,6 +50,12 @@ public partial class BuildingWindow : Window
     private DiscoveryResult? _snapshot;
     private DateTime _snapshotTimeUtc;
     private readonly ResourceSnapshotHistory _history = new();
+    private readonly string _automationControlPath = Path.Combine(Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio"), "automation-control.json");
+    private readonly DispatcherTimer _automationPoll = new() { Interval = TimeSpan.FromSeconds(10) };
+    private RuleMonitorWindow? _automationMonitor;
+    private Task? _automationCloseTask;
+    private (int Id, DateTime Started)? _automationSession;
+    private bool _automationEnabled, _automationPolling, _automationSuspended, _shuttingDown, _readyToClose;
 
     public BuildingWindow()
     {
@@ -76,13 +84,35 @@ public partial class BuildingWindow : Window
             _settingsAvailable = false;
             MessageBox.Show(this, "Saved profiles or the resource catalog could not be loaded. Existing files will not be overwritten.\n\n" + ex.Message, "Ostriv Studio", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+        try { _automationEnabled = AutomationControlStore.Load(_automationControlPath); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException)
+        { _automationEnabled = false; BottomStatus.Text = "Automation is off because its saved switch could not be read: " + ex.Message; }
         if (string.IsNullOrWhiteSpace(_state.GamePath))
         {
             _state.GamePath = SteamGameLocator.Find() ?? "";
         }
         ConnectionDetail.Text = string.IsNullOrWhiteSpace(_state.GamePath) ? "Choose your Ostriv executable to begin." : _state.GamePath;
-        Closing += (_, _) => _scanCancellation?.Cancel();
-        Loaded += async (_, _) => { await CheckConnectionAsync(); await UpdateService.CheckAsync(this, false); };
+        _automationPoll.Tick += async (_, _) => await TryStartAutomationAsync();
+        Closing += async (_, e) =>
+        {
+            _scanCancellation?.Cancel();
+            if (_readyToClose) return;
+            _shuttingDown = true; _automationPoll.Stop();
+            if (_automationMonitor is null) return;
+            e.Cancel = true; IsEnabled = false;
+            await CloseAutomationAsync();
+            _readyToClose = true; Close();
+        };
+        Loaded += async (_, _) =>
+        {
+            UpdateAutomationDisplay();
+            await CheckConnectionAsync();
+            if (_shuttingDown || !IsLoaded) return;
+            _automationPoll.Start();
+            await TryStartAutomationAsync();
+            if (_shuttingDown || !IsLoaded) return;
+            await UpdateService.CheckAsync(this, false);
+        };
         UpdateActions();
     }
 
@@ -142,11 +172,15 @@ public partial class BuildingWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or Win32Exception or OverflowException)
         { MessageBox.Show(this, ex.Message, "Shop assignments", MessageBoxButton.OK, MessageBoxImage.Information); }
     }
-    private void SetupMarketRules_Click(object sender, RoutedEventArgs e)
+    private async void SetupMarketRules_Click(object sender, RoutedEventArgs e)
     {
         if (!_settingsAvailable) { MessageBox.Show(this, "Profile settings could not be loaded.", "Shop rules", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        if (_automationSuspended || _shuttingDown) return;
+        _automationSuspended = true;
         try
         {
+            await PauseAutomationForActionAsync();
+            if (_shuttingDown) return;
             byte[] before = File.Exists(_settingsPath) ? SHA256.HashData(File.ReadAllBytes(_settingsPath)) : [];
             var fresh = ProfileStore.Load(_settingsPath);
             if (!string.Equals(fresh.SelectedProfile, _state.SelectedProfile, StringComparison.OrdinalIgnoreCase))
@@ -161,21 +195,26 @@ public partial class BuildingWindow : Window
             if (!before.AsSpan().SequenceEqual(after)) throw new InvalidOperationException("The profile changed while editing. No rules were saved; try again.");
             foreach (int id in missing) rules.Add(new MaintenanceRule { ResourceId = id, BuildingType = "building_rowhouse_shop", Target = dialog.Target, Enabled = true, Mode = MaintenanceMode.Each, BuildingLimit = -1 });
             ProfileStore.Save(_settingsPath, fresh); _state = fresh;
-            BottomStatus.Text = $"Saved {missing.Length} new shop rule(s) in {fresh.SelectedProfile}. Existing rules were kept.";
-            MessageBox.Show(this, $"Saved rules for {names}. Existing rules were not changed. Start saved rules to apply supported existing records while you play.", "Shop rules saved", MessageBoxButton.OK, MessageBoxImage.Information);
+            BottomStatus.Text = $"Saved rules for {names}. Existing rules were not changed.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException or OverflowException or JsonException)
         { MessageBox.Show(this, ex.Message, "Shop rules not saved", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        finally { _automationSuspended = false; _automationSession = null; await TryStartAutomationAsync(); }
     }
     private void ResourceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateActions();
-    private void ResourceRowAction_Click(object sender, RoutedEventArgs e)
+    private async void ResourceRowAction_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { DataContext: LiveResourceRow resource, Tag: string action }) return;
         // Commit the row's input before selecting it; the existing handlers perform validation.
         LiveResourceGrid.SelectedItem = resource;
         ActionAmount.Text = resource.Amount;
         if (action == "keep")
-            KeepStocked_Click(sender, e);
+        {
+            if (_automationSuspended || _shuttingDown) return;
+            _automationSuspended = true;
+            try { await PauseAutomationForActionAsync(); if (!_shuttingDown) KeepStocked_Click(sender, e); }
+            finally { _automationSuspended = false; _automationSession = null; await TryStartAutomationAsync(); }
+        }
         else
         {
             RaiseIntent.IsChecked = action == "raise";
@@ -204,7 +243,7 @@ public partial class BuildingWindow : Window
         ActionHint.Text = resource is null || selected.Length == 0 ? "Choose a building and a resource above." : !supported ?
             "This building and resource combination is available for inspection. Editing is not yet verified." : hold && selected.Select(b => b.Candidate.ClassName).Distinct().Count() != 1 ?
             "Select one building type to save a minimum. One rule applies to every matching building of that type." : hold ?
-            "Save a minimum for every building of this type. Use Start saved rules to keep it stocked while you play." : raise ?
+            "Save a minimum for every building of this type. Automation keeps it stocked while enabled." : raise ?
             "Increase each selected building to this amount once. Higher amounts stay unchanged; no rule is saved." :
             "Add an amount once to the selected buildings. You can review the changes before applying them.";
         if (hold && resource is not null && selected.Length > 0 && _state.AutomationProfiles.TryGetValue(_state.SelectedProfile, out var activeProfile))
@@ -520,8 +559,7 @@ public partial class BuildingWindow : Window
             if (existing is null) { existing = new MaintenanceRule { ResourceId = resource.Id, BuildingType = type }; settings.MaintenanceRules.Add(existing); }
             existing.Target = target; existing.Enabled = true; existing.Mode = MaintenanceMode.Each; existing.BuildingLimit = -1;
             ProfileStore.Save(_settingsPath, fresh); _state = fresh;
-            BottomStatus.Text = $"Saved a {resource.Name} rule in {fresh.SelectedProfile}. Start the rule monitor to apply it.";
-            MessageBox.Show(this, "Rule saved. Start the rule monitor to keep this quantity stocked while you play.", "Rule saved", MessageBoxButton.OK, MessageBoxImage.Information);
+            BottomStatus.Text = $"Saved a {resource.Name} rule in {fresh.SelectedProfile}.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or ArgumentException or OverflowException or JsonException)
         { MessageBox.Show(this, ex.Message, "Rule not saved", MessageBoxButton.OK, MessageBoxImage.Warning); }
@@ -552,19 +590,127 @@ public partial class BuildingWindow : Window
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException or ArgumentException or OverflowException)
         { MessageBox.Show(this, ex.Message, "Cannot preview rules", MessageBoxButton.OK, MessageBoxImage.Information); }
     }
-    private void MonitorRules_Click(object sender, RoutedEventArgs e)
+    private static (int Id, DateTime Started)? FindGameSession(string path)
     {
-        if (!_settingsAvailable) { MessageBox.Show(this, "Profile settings could not be loaded.", "Monitor saved rules", MessageBoxButton.OK, MessageBoxImage.Information); return; }
-        if (_scanCancellation is not null) return;
-        var window = new RuleMonitorWindow(_settingsPath, _state.SelectedProfile, _state.GamePath, _resourceNames) { Owner = this };
-        window.ShowDialog();
-        if (window.MayHaveWritten)
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var processes = Process.GetProcessesByName("ostriv");
+        try
         {
-            _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
-            ConnectionTitle.Text = "Scan again"; ConnectionDetail.Text = "Automation may have changed game memory.";
-            BottomStatus.Text = "Check the game and scan again before editing.";
+            foreach (var process in processes)
+            {
+                try
+                {
+                    var module = process.MainModule;
+                    if (!process.HasExited && module is not null && string.Equals(Path.GetFullPath(module.FileName), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+                        return (process.Id, process.StartTime.ToUniversalTime());
+                }
+                catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or IOException or ArgumentException or NotSupportedException) { }
+            }
+            return null;
+        }
+        finally { foreach (var process in processes) process.Dispose(); }
+    }
+
+    private void UpdateAutomationDisplay()
+    {
+        if (AutomationToggle is null || AutomationStatus is null) return;
+        AutomationToggle.Content = _automationEnabled ? "Automation on" : "Automation off";
+        AutomationToggle.ToolTip = _automationEnabled ? "Click to turn automation off" : "Click to turn automation on";
+        AutomationToggle.Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString(_automationEnabled ? "#A8D8B7" : "#E8EBE8")!;
+        string status = _automationMonitor?.Status ?? "";
+        AutomationStatus.Text = !_settingsAvailable ? "Automation unavailable" : !_automationEnabled ? "Automation off" :
+            _automationMonitor is null ? "Waiting for game or rules" :
+            status.StartsWith("Automation stopped", StringComparison.Ordinal) || status.StartsWith("Rule check stopped", StringComparison.Ordinal) || status.Contains("did not start", StringComparison.Ordinal) ? "Automation stopped · see rule status" :
+            _automationMonitor.IsRunning ? "Automation running" : "Automation starting";
+        AutomationStatus.ToolTip = string.IsNullOrWhiteSpace(status) ? AutomationStatus.Text : status;
+    }
+
+    private async Task CloseAutomationAsync()
+    {
+        var monitor = _automationMonitor;
+        if (monitor is null) return;
+        var closing = _automationCloseTask ??= monitor.ShutdownAsync();
+        try { await closing; }
+        finally
+        {
+            if (ReferenceEquals(_automationCloseTask, closing)) _automationCloseTask = null;
+            if (ReferenceEquals(_automationMonitor, monitor)) _automationMonitor = null;
+            UpdateAutomationDisplay();
         }
     }
+
+    private async Task PauseAutomationForActionAsync()
+    {
+        IsEnabled = false;
+        BottomStatus.Text = "Pausing automation to update your rules…";
+        try { await CloseAutomationAsync(); }
+        finally { if (!_shuttingDown) IsEnabled = true; }
+    }
+
+    private async Task TryStartAutomationAsync()
+    {
+        if (_automationPolling || _automationSuspended || _shuttingDown) return;
+        _automationPolling = true;
+        try
+        {
+            var session = FindGameSession(_state.GamePath);
+            if (_automationMonitor is not null && _automationSession != session)
+            { await CloseAutomationAsync(); _automationSession = null; }
+            if (_shuttingDown || _automationSuspended) return;
+            if (!_settingsAvailable || !_automationEnabled || session is null || _automationMonitor is not null) { UpdateAutomationDisplay(); return; }
+            if (!_state.AutomationProfiles.TryGetValue(_state.SelectedProfile, out var settings) ||
+                (!settings.MaintenanceRules.Any(rule => rule.Enabled) && !settings.CapacityRules.Any(rule => rule.Enabled)))
+            { UpdateAutomationDisplay(); return; }
+            var monitor = new RuleMonitorWindow(_settingsPath, _state.SelectedProfile, _state.GamePath, _resourceNames, background: true)
+            { Owner = this, ShowActivated = false };
+            _automationMonitor = monitor; _automationSession = session;
+            monitor.StatusChanged += UpdateAutomationDisplay;
+            monitor.StopRequested += () => _ = SetAutomationEnabledAsync(false);
+            monitor.WriteStarting += () =>
+            {
+                if (_snapshot is null) return;
+                BottomStatus.Text = "Automation is active. Shown quantities are from the last scan; edits check current game data.";
+            };
+            monitor.Closed += (_, _) => { if (ReferenceEquals(_automationMonitor, monitor)) _automationMonitor = null; UpdateAutomationDisplay(); };
+            monitor.Show(); UpdateAutomationDisplay();
+        }
+        finally { _automationPolling = false; }
+    }
+
+    private async Task SetAutomationEnabledAsync(bool enabled)
+    {
+        if (!_settingsAvailable || _automationSuspended || _shuttingDown) return;
+        AutomationToggle.IsEnabled = false;
+        try
+        {
+        Exception? saveFailure = null;
+        try { AutomationControlStore.Save(_automationControlPath, enabled); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or JsonException)
+        {
+            if (enabled) { MessageBox.Show(this, "Automation could not be enabled because its setting could not be saved. " + ex.Message, "Automation", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            saveFailure = ex;
+        }
+        _automationEnabled = enabled;
+        if (!enabled) { _automationSuspended = true; try { await CloseAutomationAsync(); } finally { _automationSuspended = false; } }
+        else { _automationSession = null; await TryStartAutomationAsync(); }
+        UpdateAutomationDisplay();
+        if (saveFailure is not null)
+            MessageBox.Show(this, "Automation is off for this session, but the setting could not be saved and may turn on again after restart. " + saveFailure.Message, "Automation", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally { AutomationToggle.IsEnabled = true; }
+    }
+
+    private async void AutomationToggle_Click(object sender, RoutedEventArgs e) => await SetAutomationEnabledAsync(!_automationEnabled);
+
+    public async void ShowAutomationMonitor()
+    {
+        if (!_settingsAvailable) { MessageBox.Show(this, "Profile settings could not be loaded.", "Automation", MessageBoxButton.OK, MessageBoxImage.Information); return; }
+        await TryStartAutomationAsync();
+        if (_automationMonitor is null) { BottomStatus.Text = _automationEnabled ? "Waiting for Ostriv and an enabled rule." : "Automation is off. Use Automation off to turn it on."; return; }
+        _automationMonitor.Show(); _automationMonitor.Activate();
+    }
+
+    private void MonitorRules_Click(object sender, RoutedEventArgs e) => ShowAutomationMonitor();
     private void ApplyCampRules_Click(object sender, RoutedEventArgs e)
     {
         var selected = BuildingGrid.SelectedItems.OfType<BuildingRow>().Select(x => x.Candidate).ToArray();
@@ -595,7 +741,7 @@ public partial class BuildingWindow : Window
         if (MessageBox.Show(this, question, "Confirm camp rules", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         try
         {
-            int applied = CampRuleExecutor.ApplyBatchToGame(_state, _snapshot!, selected);
+            int applied = GameWriteCoordinator.Run(() => CampRuleExecutor.ApplyBatchToGame(_state, _snapshot!, selected));
             MessageBox.Show(this, $"{applied} resource change(s) passed memory readback. Check them in Ostriv.\n\nBackups: {backup.Directory}", "Camp rules", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or Win32Exception or OverflowException)
@@ -607,9 +753,14 @@ public partial class BuildingWindow : Window
             BottomStatus.Text = "Check the result in Ostriv; reload the backup without saving if anything is unexpected.";
         }
     }
-    private void Profiles_Click(object sender, RoutedEventArgs e)
+    private async void Profiles_Click(object sender, RoutedEventArgs e)
     {
-        if (_scanCancellation is not null) return;
+        if (_scanCancellation is not null || _automationSuspended || _shuttingDown) return;
+        _automationSuspended = true;
+        try
+        {
+        await PauseAutomationForActionAsync();
+        if (_shuttingDown) return;
         var profiles = new MainWindow { Owner = this }; profiles.ShowDialog();
         if (profiles.MayHaveWritten)
         {
@@ -627,17 +778,27 @@ public partial class BuildingWindow : Window
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException)
         { _settingsAvailable = false; MessageBox.Show(this, "Profile settings could not be reloaded. Existing files were preserved.\n\n" + ex.Message, "Ostriv Studio", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }
+        finally { _automationSuspended = false; _automationSession = null; await TryStartAutomationAsync(); }
     }
-    private void ChooseGame_Click(object sender, RoutedEventArgs e)
+    private async void ChooseGame_Click(object sender, RoutedEventArgs e)
     {
+        if (_automationSuspended || _shuttingDown) return;
         var dialog = new OpenFileDialog { Title = "Choose Ostriv's executable", Filter = "Ostriv executable (ostriv.exe)|ostriv.exe", CheckFileExists = true };
         if (dialog.ShowDialog(this) != true) return;
+        _automationSuspended = true;
+        try
+        {
+        await PauseAutomationForActionAsync();
+        if (_shuttingDown) return;
         string previous = _state.GamePath; _state.GamePath = dialog.FileName;
         try { if (_settingsAvailable) ProfileStore.Save(_settingsPath, _state); else throw new InvalidDataException("Saved profiles must be repaired first."); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException)
         { _state.GamePath = previous; MessageBox.Show(this, ex.Message, "Could not save game location", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         _snapshot = null; _buildings.Clear(); _observations.Clear(); UpdateCount();
         ConnectionTitle.Text = "Game location saved"; ConnectionDetail.Text = _state.GamePath;
+        }
+        finally { _automationSuspended = false; _automationSession = null; await TryStartAutomationAsync(); }
     }
     private async Task CheckConnectionAsync()
     {
