@@ -25,7 +25,12 @@ public sealed record BuildingRow(string Name, int ResourceCount, BuildingCandida
     };
     public string Badge => Category switch { "Trade" => "T", "Farm" => "F", "Storage" => "S", "Water" => "W", _ => "B" };
 }
-public sealed record LiveResourceRow(string Name, int Id, string Stored, string Reserved, string Awaited, string Other);
+public sealed record LiveResourceRow(string Name, int Id, string Stored, string Reserved, string Awaited, string Other)
+{
+    public string Amount { get; set; } = "";
+    public bool CanEdit { get; init; }
+    public bool CanKeep { get; init; }
+}
 public sealed record StockMixRow(string Label, double Percent);
 
 public partial class BuildingWindow : Window
@@ -163,6 +168,20 @@ public partial class BuildingWindow : Window
         { MessageBox.Show(this, ex.Message, "Shop rules not saved", MessageBoxButton.OK, MessageBoxImage.Warning); }
     }
     private void ResourceSelection_Changed(object sender, SelectionChangedEventArgs e) => UpdateActions();
+    private void ResourceRowAction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: LiveResourceRow resource, Tag: string action }) return;
+        // Commit the row's input before selecting it; the existing handlers perform validation.
+        LiveResourceGrid.SelectedItem = resource;
+        ActionAmount.Text = resource.Amount;
+        if (action == "keep")
+            KeepStocked_Click(sender, e);
+        else
+        {
+            RaiseIntent.IsChecked = action == "raise";
+            AddNow_Click(sender, e);
+        }
+    }
     private void ActionIntent_Changed(object sender, RoutedEventArgs e) => UpdateActions();
     private void ActionAmount_Changed(object sender, TextChangedEventArgs e) => UpdateActions();
     private void ReviewAction_Click(object sender, RoutedEventArgs e)
@@ -297,9 +316,17 @@ public partial class BuildingWindow : Window
             StockMixTitle.Text = $"Stock mix · {row.Name} · share of observed stock";
             StockMixPanel.Visibility = Visibility.Visible;
         }
+        var selectedBuildings = BuildingGrid.SelectedItems.OfType<BuildingRow>().ToArray();
         foreach (var total in totals.OrderBy(x => _resourceNames.GetValueOrDefault(x.Id, $"Unknown resource {x.Id}")))
+        {
+            bool supported = selectedBuildings.Length > 0 && selectedBuildings.All(b => ExistingRuleExecutor.SupportsExisting(b.Candidate.ClassName, total.Id));
             _observations.Add(new(_resourceNames.GetValueOrDefault(total.Id, $"Unknown resource {total.Id}"), total.Id,
-                FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other)));
+                FormatAmount(total.Stored), FormatAmount(total.Reserved), FormatAmount(total.Awaited), FormatAmount(total.Other))
+            {
+                CanEdit = supported,
+                CanKeep = supported && _settingsAvailable && selectedBuildings.Select(b => b.Candidate.ClassName).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1
+            });
+        }
         if (previousResource.HasValue) LiveResourceGrid.SelectedItem = _observations.FirstOrDefault(r => r.Id == previousResource.Value);
         UpdateActions();
     }

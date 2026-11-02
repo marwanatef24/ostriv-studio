@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
-using Microsoft.Win32;
 using OstrivStudio.Core;
 
 namespace OstrivStudio;
@@ -80,21 +79,22 @@ public sealed class AddStockWindow : Window
     private async void Apply_Click(object sender, RoutedEventArgs e)
     {
         if (_busy || _reviewedAmount is not decimal amount) return;
-        var select = new OpenFileDialog { Title = "Select the save currently loaded in Ostriv", Filter = "Ostriv saves (*.save)|*.save", CheckFileExists = true,
-            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save") };
-        if (select.ShowDialog(this) != true) return;
-        SaveBackup.SessionBackup backup;
+        _busy = true; _apply.IsEnabled = false; _amount.IsEnabled = false;
+        _status.Text = "Backing up your saves automatically…";
+        SaveBackup.SaveDirectoryBackup backup;
         try
         {
             string root = Environment.GetEnvironmentVariable("OSTRIV_STUDIO_DATA_DIR") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OstrivStudio");
-            backup = SaveBackup.CopySessionVerified(select.FileName, Path.Combine(root, "Backups"));
+            string saves = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games", "Ostriv", "save");
+            backup = await Task.Run(() => SaveBackup.CopyAllSavesVerified(saves, Path.Combine(root, "Backups")));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
-        { MessageBox.Show(this, "Backup failed; no stock was changed.\n\n" + ex.Message, "Backup failed", MessageBoxButton.OK, MessageBoxImage.Error); return; }
-        string action = _raiseTo ? $"Raise {_resource.Name} to {amount:N0} in each selected building below that target (higher amounts stay unchanged)" : $"Add {amount:N0} {_resource.Name} to each of {_buildings.Length} selected building(s)";
-        string prompt = $"Backed up the selected save and {backup.Autosaves.Count} autosave(s):\n{backup.Directory}\n\nIs this the loaded save, and do the selected candidates match your buildings? {action}? The game pauses briefly; avoid changing its speed during the edit.\n\nA failure may be partial. Do not save if uncertain; reload the backup and recover autosaves from its manifest.";
-        if (MessageBox.Show(this, prompt, Title + "?", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        _busy = true; _apply.IsEnabled = false; _amount.IsEnabled = false; _status.Text = _raiseTo ? "Raising stock…" : "Adding stock…";
+        {
+            _busy = false; _apply.IsEnabled = true; _amount.IsEnabled = true;
+            _status.Text = "Backup failed; no stock was changed. " + ex.Message;
+            return;
+        }
+        _status.Text = _raiseTo ? "Raising stock…" : "Adding stock…";
         try
         {
             int count = await Task.Run(() => _raiseTo ? ManualStockEditor.ApplyRaiseToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None) : ManualStockEditor.ApplyToGame(_scan, _buildings.Select(b => b.Candidate).ToArray(), _resource.Id, amount, CancellationToken.None));

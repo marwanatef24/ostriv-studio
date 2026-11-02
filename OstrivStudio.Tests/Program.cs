@@ -96,6 +96,7 @@ Check(sessionBackup.Autosaves.All(x => manifestText.Contains(Path.GetFileName(x.
     "session backup manifest identifies the original and backup files for recovery");
 Throws<InvalidDataException>(() => SaveBackup.CopySessionVerified(Path.Combine(testSaveDir, "autosave_notes.txt"), Path.Combine(dir, "session-backups")),
     "session backup rejects a non-save selection");
+SaveDirectoryBackupTests.Run(dir);
 var document = new ProfileDocument { GamePath = @"D:\Games\Ostriv\ostriv.exe" };
 document.Profiles["My profile"][6] = 123.5m;
 ProfileStore.Save(path, document);

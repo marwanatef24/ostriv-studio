@@ -52,6 +52,20 @@ internal static class RuleMonitorTests
             new() { ResourceId = 7, BuildingType = "building_rowhouse_shop", Enabled = true, Target = 101 } ] };
         var unsupportedReport = RuleMonitor.Assess(scan, unsupported);
         Check(unsupportedReport.Rows.All(r => r.State == "Not supported"), "read-only rule checks explain unsupported shop goods and excessive targets before automation starts");
+        var acrossSettings = new AutomationProfileSettings { MaintenanceRules = [
+            new() { ResourceId = 14, BuildingType = "building_well", Enabled = true, Target = 5000, Mode = MaintenanceMode.Across } ] };
+        var fractional = scan with { Buildings = scan.Buildings.Select(b => b == alteredWell
+            ? b with { Resources = b.Resources.Select(r => r with { Amount = 4999.5f }).ToArray() } : b).ToArray() };
+        var fractionalRow = RuleMonitor.Assess(fractional, acrossSettings).Rows.Single();
+        Check(fractionalRow.State == "Not supported" && fractionalRow.Detail.Contains("whole-unit"),
+            "across monitor explains fractional stock that the automation planner cannot edit");
+        var missingWell = alteredWell with { Resources = [], ResourceCount = 0 };
+        var missingScan = scan with { Buildings = scan.Buildings.Select(b => b == alteredWell ? missingWell : b).ToArray() };
+        var missingRow = RuleMonitor.Assess(missingScan, acrossSettings).Rows.Single();
+        Check(missingRow.State == "Not supported" && !string.IsNullOrWhiteSpace(missingRow.Detail),
+            "across monitor reports a missing resource layout instead of promising an edit");
+        Check(RuleMonitor.Assess(scan, acrossSettings).Rows.Single().State == "Below target",
+            "across monitor still reports a supported shortfall");
         try { RuleMonitor.Assess(scan with { Complete = false }, settings); throw new Exception("Incomplete scan accepted"); }
         catch (InvalidOperationException) { Console.WriteLine("PASS rule monitor rejects incomplete scans"); }
 
